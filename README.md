@@ -1,4 +1,4 @@
-# PMS Max · Cockpit v0.9
+# PMS Max · Cockpit v0.10
 
 Esta es la instancia privada de **PMS Max**.
 
@@ -44,7 +44,7 @@ Incluye consulta libre y acciones guiadas:
 
 El dashboard funciona sin API key. El asesor requiere `OPENAI_API_KEY`.
 
-## v0.9 — Capas explícitas
+## v0.10 — Capas explícitas
 PMS Max Cockpit queda dividido conceptualmente en:
 
 1. Dashboard
@@ -76,14 +76,21 @@ El Simulador calcula de manera determinística el impacto de comprar/vender un m
 Luego permite enviar ese escenario al Asesor IA para interpretación.
 
 
-## v0.9
+## v0.10
 Dashboard reforzado, contexto compartido, detalle de exposición, concentración por posición y proyecto listo para deploy en Streamlit Cloud.
 
 
-## v0.9
+## v0.10
 Fix de arranque en Streamlit: `apply_analysis_context()` ahora se define antes de su primer uso.
 
-## v0.9
+## v0.10
 - Fix de columnas normalizadas `Variación_num` e `Impacto cartera_num`.
 - Corrige el KeyError que frenaba Resumen en Mayores movimientos.
 - Evita mostrar `Precios: nan` cuando el estado no está disponible.
+
+## v0.10
+- Formato numérico homogéneo en español.
+- Valores USD con separador de miles.
+- Porcentajes visibles como porcentaje, no como fracción decimal.
+- Encabezados de tablas y ejes sin sufijos técnicos `_num`.
+- Ajuste visual de tarjetas KPI para evitar cortes de línea.

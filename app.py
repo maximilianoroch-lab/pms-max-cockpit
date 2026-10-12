@@ -15,7 +15,7 @@ st.markdown("""
 [data-testid="stSidebar"] {background: #091522;}
 .metric-card {background:linear-gradient(180deg,#0d1b2b,#0a1827);border:1px solid #28455f;border-radius:14px;padding:14px 16px;min-height:112px}
 .metric-label{color:#93a7bd;font-size:12px;font-weight:700;text-transform:uppercase}
-.metric-value{color:#f4f7fb;font-size:27px;font-weight:900;margin-top:6px}
+.metric-value{color:#f4f7fb;font-size:24px;font-weight:900;margin-top:6px;white-space:nowrap}
 .metric-sub{color:#93a7bd;font-size:11px;margin-top:6px}
 .up{color:#54d49a;font-weight:800}.down{color:#ff7a7a;font-weight:800}.flat{color:#93a7bd;font-weight:800}
 </style>
@@ -107,11 +107,26 @@ with st.sidebar:
     st.caption("Asesor IA: "+("configurado" if has_key else "pendiente de API key"))
 
 def fmt_usd(x):
-    try:return f"US$ {float(x):,.0f}".replace(",",".")
-    except:return "—"
-def fmt_pct(x):
-    try:return f"{float(x)*100:.1f}%".replace(".",",")
-    except:return "—"
+    try:
+        n=float(x)
+        s=f"{n:,.0f}".replace(",","X").replace(".",",").replace("X",".")
+        return f"US$ {s}"
+    except:
+        return "—"
+
+def fmt_num(x,decimals=0):
+    try:
+        n=float(x)
+        s=f"{n:,.{decimals}f}".replace(",","X").replace(".",",").replace("X",".")
+        return s
+    except:
+        return "—"
+
+def fmt_pct(x,decimals=1):
+    try:
+        return f"{float(x)*100:.{decimals}f}%".replace(".",",")
+    except:
+        return "—"
 def change_html(v):
     try:x=float(v)
     except:x=0
@@ -163,8 +178,16 @@ def top_positions_table(limit=12):
     app_df=data.get("app_feed_v2",pd.DataFrame()).copy()
     if app_df.empty: return
     top=app_df[app_df["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(limit)
-    ev=st.dataframe(top[["Ticker","Nombre","Valor USD_num","Peso_num","Variación_num","Estado dato"]],
-        hide_index=True,use_container_width=True,on_select="rerun",selection_mode="single-row",key=f"top_positions_{limit}")
+    ev=st.dataframe(
+        top[["Ticker","Nombre","Valor USD_num","Peso_num","Variación_num","Estado dato"]],
+        hide_index=True,use_container_width=True,on_select="rerun",selection_mode="single-row",key=f"top_positions_{limit}",
+        column_config={
+            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
+            "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
+            "Estado dato":st.column_config.TextColumn("Estado"),
+        }
+    )
     try:
         if ev.selection.rows:
             chosen=str(top.iloc[ev.selection.rows[0]]["Ticker"])
@@ -266,7 +289,7 @@ if page in ["Resumen","Diversificación","Evolución","Riesgo","Custodia","Posic
 
 if page=="Resumen":
     render_global_context_banner()
-    cols=st.columns(6)
+    cols=st.columns([1.15,1.0,1.15,0.95,0.95,0.85])
     vals=[
         ("Patrimonio sin Crypto",fmt_usd(summary["non_crypto"]),"Capital financiero principal",summary.get("non_crypto_change")),
         ("Crypto",fmt_usd(summary["crypto"]),fmt_pct(summary["crypto_pct"]),summary.get("crypto_change")),
@@ -283,7 +306,7 @@ if page=="Resumen":
         st.subheader("Composición por clase")
         df=data["dashboard_diversificacion_v2"].copy()
         df=df[(df["Clase inversión"]!="Total")&df["Clase inversión"].notna()]
-        fig=px.bar(df,x="Valor USD_num",y="Clase inversión",orientation="h",hover_data={"Peso_num":":.1%"})
+        fig=px.bar(df,x="Valor USD_num",y="Clase inversión",orientation="h",hover_data={"Peso_num":":.1%"},labels={"Valor USD_num":"Valor USD","Clase inversión":"Clase"})
         st.plotly_chart(fig,use_container_width=True)
     with c2:
         st.subheader("Mayores movimientos")
@@ -291,7 +314,16 @@ if page=="Resumen":
         m=app[app["Ticker"].notna()].copy()
         m["abs"]=m["Variación_num"].abs()
         m=m.sort_values("abs",ascending=False).head(10)
-        st.dataframe(m[["Ticker","Nombre","Valor USD_num","Peso_num","Variación_num","Estado dato"]],hide_index=True,use_container_width=True)
+        st.dataframe(
+            m[["Ticker","Nombre","Valor USD_num","Peso_num","Variación_num","Estado dato"]],
+            hide_index=True,use_container_width=True,
+            column_config={
+                "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+                "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
+                "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
+                "Estado dato":st.column_config.TextColumn("Estado"),
+            }
+        )
 
     st.subheader("Principales posiciones")
     st.caption("Seleccioná una fila para convertir ese activo en el ticker activo.")
@@ -303,7 +335,7 @@ elif page=="Diversificación":
     c1,c2=st.columns(2)
     with c1:
         r=ex[["Región","Valor USD_num","Peso_num"]].dropna(subset=["Región"])
-        fig=px.bar(r,x="Valor USD_num",y="Región",orientation="h",hover_data={"Peso_num":":.1%"})
+        fig=px.bar(r,x="Valor USD_num",y="Región",orientation="h",hover_data={"Peso_num":":.1%"},labels={"Valor USD_num":"Valor USD"})
         ev=st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points",key="region_chart")
         try:
             pts=ev.selection.points
@@ -312,7 +344,7 @@ elif page=="Diversificación":
         except Exception: pass
     with c2:
         s=ex[["Sector","Sector Valor USD_num","Sector Peso_num"]].dropna(subset=["Sector"])
-        fig=px.bar(s,x="Sector Valor USD_num",y="Sector",orientation="h",hover_data={"Sector Peso_num":":.1%"})
+        fig=px.bar(s,x="Sector Valor USD_num",y="Sector",orientation="h",hover_data={"Sector Peso_num":":.1%"},labels={"Sector Valor USD_num":"Valor USD"})
         ev2=st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points",key="sector_chart")
         try:
             pts=ev2.selection.points
@@ -323,7 +355,14 @@ elif page=="Diversificación":
     detail=apply_analysis_context(data.get("looker_feed_v2",pd.DataFrame()).copy())
     if not detail.empty and st.session_state.get("analysis_context",{}).get("value"):
         st.subheader("Posiciones dentro del contexto")
-        st.dataframe(detail.sort_values("Valor USD_num",ascending=False)[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num"]],hide_index=True,use_container_width=True)
+        st.dataframe(
+            detail.sort_values("Valor USD_num",ascending=False)[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num"]],
+            hide_index=True,use_container_width=True,
+            column_config={
+                "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+                "Peso cartera_num":st.column_config.NumberColumn("Peso cartera",format="%.1f%%"),
+            }
+        )
 
 elif page=="Evolución":
     evo=data["dashboard_evolucion_v2"].copy()
@@ -381,7 +420,13 @@ elif page=="Posiciones":
     pos_event=st.dataframe(
         view[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num","Variación_num","Estado dato"]],
         hide_index=True,use_container_width=True,height=700,
-        on_select="rerun",selection_mode="single-row",key="positions_table"
+        on_select="rerun",selection_mode="single-row",key="positions_table",
+        column_config={
+            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Peso cartera_num":st.column_config.NumberColumn("Peso",format="%.2f%%"),
+            "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
+            "Estado dato":st.column_config.TextColumn("Estado"),
+        }
     )
     try:
         selected_rows=pos_event.selection.rows
