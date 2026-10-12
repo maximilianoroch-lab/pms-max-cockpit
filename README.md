@@ -1,4 +1,4 @@
-# PMS Max · Cockpit v0.10
+# PMS Max · Cockpit v0.12
 
 Esta es la instancia privada de **PMS Max**.
 
@@ -44,7 +44,7 @@ Incluye consulta libre y acciones guiadas:
 
 El dashboard funciona sin API key. El asesor requiere `OPENAI_API_KEY`.
 
-## v0.10 — Capas explícitas
+## v0.12 — Capas explícitas
 PMS Max Cockpit queda dividido conceptualmente en:
 
 1. Dashboard
@@ -76,21 +76,33 @@ El Simulador calcula de manera determinística el impacto de comprar/vender un m
 Luego permite enviar ese escenario al Asesor IA para interpretación.
 
 
-## v0.10
+## v0.12
 Dashboard reforzado, contexto compartido, detalle de exposición, concentración por posición y proyecto listo para deploy en Streamlit Cloud.
 
 
-## v0.10
+## v0.12
 Fix de arranque en Streamlit: `apply_analysis_context()` ahora se define antes de su primer uso.
 
-## v0.10
+## v0.12
 - Fix de columnas normalizadas `Variación_num` e `Impacto cartera_num`.
 - Corrige el KeyError que frenaba Resumen en Mayores movimientos.
 - Evita mostrar `Precios: nan` cuando el estado no está disponible.
 
-## v0.10
+## v0.12
 - Formato numérico homogéneo en español.
 - Valores USD con separador de miles.
 - Porcentajes visibles como porcentaje, no como fracción decimal.
 - Encabezados de tablas y ejes sin sufijos técnicos `_num`.
 - Ajuste visual de tarjetas KPI para evitar cortes de línea.
+
+## v0.12
+- Corrección de porcentajes en tablas: Peso y Variación ahora se muestran en puntos porcentuales reales.
+- Formato consistente en Resumen, Evolución, Posiciones, Diversificación y Custodia.
+
+## v0.12
+- Patrimonio total como KPI principal a la izquierda.
+- Crypto y Patrimonio sin Crypto agrupados en una misma tarjeta secundaria.
+- Composición por clase más angosta; Mayores movimientos más ancho.
+- Estados MEP/CCL desactualizados compactados a Último MEP / Último CCL.
+- Nombres largos compactados en Mayores movimientos y Principales posiciones.
+- Columnas de Estado más angostas y tipografía de tablas más compacta.

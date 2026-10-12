@@ -13,6 +13,7 @@ st.markdown("""
 <style>
 .block-container {padding-top: 1.2rem; max-width: 1700px;}
 [data-testid="stSidebar"] {background: #091522;}
+[data-testid="stDataFrame"] {font-size: 0.92rem;}
 .metric-card {background:linear-gradient(180deg,#0d1b2b,#0a1827);border:1px solid #28455f;border-radius:14px;padding:14px 16px;min-height:112px}
 .metric-label{color:#93a7bd;font-size:12px;font-weight:700;text-transform:uppercase}
 .metric-value{color:#f4f7fb;font-size:24px;font-weight:900;margin-top:6px;white-space:nowrap}
@@ -127,6 +128,25 @@ def fmt_pct(x,decimals=1):
         return f"{float(x)*100:.{decimals}f}%".replace(".",",")
     except:
         return "—"
+def pct_points(series):
+    try:
+        return pd.to_numeric(series,errors="coerce")*100
+    except:
+        return series
+
+def compact_status(v):
+    s=str(v or "")
+    repl={
+        "TC MEP DESACTUALIZADO":"Último MEP",
+        "TC CCL DESACTUALIZADO":"Último CCL",
+        "MANUAL":"Manual",
+        "ACTUALIZADO":"Actualizado",
+    }
+    return repl.get(s,s)
+
+def compact_name(v,max_len=26):
+    s=str(v or "")
+    return s if len(s)<=max_len else s[:max_len-1]+"…"
 def change_html(v):
     try:x=float(v)
     except:x=0
@@ -136,6 +156,24 @@ def change_html(v):
 def metric_card(label,value,sub="",change=None):
     delta=f"<div>{change_html(change)}</div>" if change is not None else ""
     st.markdown(f'<div class="metric-card"><div class="metric-label">{label}</div><div class="metric-value">{value}</div><div class="metric-sub">{sub}</div>{delta}</div>',unsafe_allow_html=True)
+
+def split_wealth_card(crypto,crypto_pct,non_crypto):
+    html = (
+        '<div class="metric-card">'
+        '<div class="metric-label">DESGLOSE</div>'
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px">'
+        '<div>'
+        '<div class="metric-sub">Crypto</div>'
+        f'<div class="metric-value" style="font-size:20px">{fmt_usd(crypto)}</div>'
+        f'<div class="metric-sub">{fmt_pct(crypto_pct)}</div>'
+        '</div>'
+        '<div style="border-left:1px solid #28455f;padding-left:14px">'
+        '<div class="metric-sub">Sin Crypto</div>'
+        f'<div class="metric-value" style="font-size:20px">{fmt_usd(non_crypto)}</div>'
+        '<div class="metric-sub">Capital principal</div>'
+        '</div></div></div>'
+    )
+    st.markdown(html,unsafe_allow_html=True)
 
 def active_ticker_snapshot(ticker):
     if not ticker:
@@ -178,8 +216,13 @@ def top_positions_table(limit=12):
     app_df=data.get("app_feed_v2",pd.DataFrame()).copy()
     if app_df.empty: return
     top=app_df[app_df["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(limit)
+    top_show=top[["Ticker","Nombre","Valor USD_num","Peso_num","Variación_num","Estado dato"]].copy()
+    top_show["Nombre"]=top_show["Nombre"].map(compact_name)
+    top_show["Estado dato"]=top_show["Estado dato"].map(compact_status)
+    top_show["Peso_num"]=pct_points(top_show["Peso_num"])
+    top_show["Variación_num"]=pct_points(top_show["Variación_num"])
     ev=st.dataframe(
-        top[["Ticker","Nombre","Valor USD_num","Peso_num","Variación_num","Estado dato"]],
+        top_show,
         hide_index=True,use_container_width=True,on_select="rerun",selection_mode="single-row",key=f"top_positions_{limit}",
         column_config={
             "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
@@ -289,24 +332,25 @@ if page in ["Resumen","Diversificación","Evolución","Riesgo","Custodia","Posic
 
 if page=="Resumen":
     render_global_context_banner()
-    cols=st.columns([1.15,1.0,1.15,0.95,0.95,0.85])
-    vals=[
-        ("Patrimonio sin Crypto",fmt_usd(summary["non_crypto"]),"Capital financiero principal",summary.get("non_crypto_change")),
-        ("Crypto",fmt_usd(summary["crypto"]),fmt_pct(summary["crypto_pct"]),summary.get("crypto_change")),
-        ("Patrimonio total",fmt_usd(summary["total"]),"Incluye Crypto",summary.get("total_change")),
-        ("Argentina",fmt_pct(summary["argentina_pct"]),"Exposición",summary.get("argentina_change")),
-        ("Top 5",fmt_pct(summary["top5_pct"]),"Concentración",summary.get("top5_change")),
-        ("Posiciones",str(int(summary["positions_count"])),f"Precios: {summary.get('price_update') if summary.get('price_update') not in ('nan','NaN','') else '—'}",None),
-    ]
-    for c,v in zip(cols,vals):
-        with c: metric_card(*v)
+    cols=st.columns([1.45,1.55,0.9,0.9,0.8])
+    with cols[0]:
+        metric_card("Patrimonio total",fmt_usd(summary["total"]),"Incluye Crypto",summary.get("total_change"))
+    with cols[1]:
+        split_wealth_card(summary["crypto"],summary["crypto_pct"],summary["non_crypto"])
+    with cols[2]:
+        metric_card("Argentina",fmt_pct(summary["argentina_pct"]),"Exposición",summary.get("argentina_change"))
+    with cols[3]:
+        metric_card("Top 5",fmt_pct(summary["top5_pct"]),"Concentración",summary.get("top5_change"))
+    with cols[4]:
+        metric_card("Posiciones",str(int(summary["positions_count"])),f"Precios: {summary.get('price_update') if summary.get('price_update') not in ('nan','NaN','') else '—'}",None)
 
-    c1,c2=st.columns(2)
+    c1,c2=st.columns([0.8,1.2])
     with c1:
         st.subheader("Composición por clase")
         df=data["dashboard_diversificacion_v2"].copy()
         df=df[(df["Clase inversión"]!="Total")&df["Clase inversión"].notna()]
         fig=px.bar(df,x="Valor USD_num",y="Clase inversión",orientation="h",hover_data={"Peso_num":":.1%"},labels={"Valor USD_num":"Valor USD","Clase inversión":"Clase"})
+        fig.update_layout(height=300,margin=dict(l=10,r=10,t=10,b=10))
         st.plotly_chart(fig,use_container_width=True)
     with c2:
         st.subheader("Mayores movimientos")
@@ -314,14 +358,20 @@ if page=="Resumen":
         m=app[app["Ticker"].notna()].copy()
         m["abs"]=m["Variación_num"].abs()
         m=m.sort_values("abs",ascending=False).head(10)
+        m_show=m[["Ticker","Nombre","Valor USD_num","Peso_num","Variación_num","Estado dato"]].copy()
+        m_show["Nombre"]=m_show["Nombre"].map(compact_name)
+        m_show["Estado dato"]=m_show["Estado dato"].map(compact_status)
+        m_show["Peso_num"]=pct_points(m_show["Peso_num"])
+        m_show["Variación_num"]=pct_points(m_show["Variación_num"])
         st.dataframe(
-            m[["Ticker","Nombre","Valor USD_num","Peso_num","Variación_num","Estado dato"]],
+            m_show,
             hide_index=True,use_container_width=True,
             column_config={
                 "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
                 "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
                 "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
-                "Estado dato":st.column_config.TextColumn("Estado"),
+                "Nombre":st.column_config.TextColumn("Nombre",width="medium"),
+                "Estado dato":st.column_config.TextColumn("Estado",width="small"),
             }
         )
 
@@ -355,8 +405,10 @@ elif page=="Diversificación":
     detail=apply_analysis_context(data.get("looker_feed_v2",pd.DataFrame()).copy())
     if not detail.empty and st.session_state.get("analysis_context",{}).get("value"):
         st.subheader("Posiciones dentro del contexto")
+        detail_show=detail.sort_values("Valor USD_num",ascending=False)[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num"]].copy()
+        detail_show["Peso cartera_num"]=pct_points(detail_show["Peso cartera_num"])
         st.dataframe(
-            detail.sort_values("Valor USD_num",ascending=False)[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num"]],
+            detail_show,
             hide_index=True,use_container_width=True,
             column_config={
                 "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
@@ -407,7 +459,15 @@ elif page=="Custodia":
     rows=detail[detail["Custodio"]==cust].copy().sort_values("Valor USD_num",ascending=False)
     fig=px.bar(rows.head(15),x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h")
     st.plotly_chart(fig,use_container_width=True)
-    st.dataframe(rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Valor USD_num","Peso custodio_num"]],hide_index=True,use_container_width=True)
+    rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Valor USD_num","Peso custodio_num"]].copy()
+    rows_show["Peso custodio_num"]=pct_points(rows_show["Peso custodio_num"])
+    st.dataframe(
+        rows_show,hide_index=True,use_container_width=True,
+        column_config={
+            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Peso custodio_num":st.column_config.NumberColumn("Peso custodio",format="%.1f%%"),
+        }
+    )
 
 elif page=="Posiciones":
     search=st.text_input("Buscar ticker o nombre")
@@ -417,8 +477,11 @@ elif page=="Posiciones":
         view=view[view["Ticker"].astype(str).str.lower().str.contains(q,na=False)|view["Nombre"].astype(str).str.lower().str.contains(q,na=False)]
     view=view.sort_values("Valor USD_num",ascending=False)
     st.caption(f"{len(view)} filas · {fmt_usd(view['Valor USD_num'].sum())}")
+    view_show=view[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num","Variación_num","Estado dato"]].copy()
+    view_show["Peso cartera_num"]=pct_points(view_show["Peso cartera_num"])
+    view_show["Variación_num"]=pct_points(view_show["Variación_num"])
     pos_event=st.dataframe(
-        view[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num","Variación_num","Estado dato"]],
+        view_show,
         hide_index=True,use_container_width=True,height=700,
         on_select="rerun",selection_mode="single-row",key="positions_table",
         column_config={
