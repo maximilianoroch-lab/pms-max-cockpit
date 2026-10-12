@@ -1,4 +1,4 @@
-# PMS Max · Cockpit v0.14
+# PMS Max · Cockpit v0.15
 
 Esta es la instancia privada de **PMS Max**.
 
@@ -44,7 +44,7 @@ Incluye consulta libre y acciones guiadas:
 
 El dashboard funciona sin API key. El asesor requiere `OPENAI_API_KEY`.
 
-## v0.14 — Capas explícitas
+## v0.15 — Capas explícitas
 PMS Max Cockpit queda dividido conceptualmente en:
 
 1. Dashboard
@@ -76,30 +76,30 @@ El Simulador calcula de manera determinística el impacto de comprar/vender un m
 Luego permite enviar ese escenario al Asesor IA para interpretación.
 
 
-## v0.14
+## v0.15
 Dashboard reforzado, contexto compartido, detalle de exposición, concentración por posición y proyecto listo para deploy en Streamlit Cloud.
 
 
-## v0.14
+## v0.15
 Fix de arranque en Streamlit: `apply_analysis_context()` ahora se define antes de su primer uso.
 
-## v0.14
+## v0.15
 - Fix de columnas normalizadas `Variación_num` e `Impacto cartera_num`.
 - Corrige el KeyError que frenaba Resumen en Mayores movimientos.
 - Evita mostrar `Precios: nan` cuando el estado no está disponible.
 
-## v0.14
+## v0.15
 - Formato numérico homogéneo en español.
 - Valores USD con separador de miles.
 - Porcentajes visibles como porcentaje, no como fracción decimal.
 - Encabezados de tablas y ejes sin sufijos técnicos `_num`.
 - Ajuste visual de tarjetas KPI para evitar cortes de línea.
 
-## v0.14
+## v0.15
 - Corrección de porcentajes en tablas: Peso y Variación ahora se muestran en puntos porcentuales reales.
 - Formato consistente en Resumen, Evolución, Posiciones, Diversificación y Custodia.
 
-## v0.14
+## v0.15
 - Patrimonio total como KPI principal a la izquierda.
 - Crypto y Patrimonio sin Crypto agrupados en una misma tarjeta secundaria.
 - Composición por clase más angosta; Mayores movimientos más ancho.
@@ -107,15 +107,20 @@ Fix de arranque en Streamlit: `apply_analysis_context()` ahora se define antes d
 - Nombres largos compactados en Mayores movimientos y Principales posiciones.
 - Columnas de Estado más angostas y tipografía de tablas más compacta.
 
-## v0.14
+## v0.15
 - Se elimina la tarjeta frontal de “Desglose”.
 - El Resumen prioriza Patrimonio total, Argentina, Top 5 y Posiciones.
 - Se agrega en Diversificación un gráfico de torta/donut “Cripto vs cartera convencional”.
 - Colores del donut: Crypto en bordeaux oscuro y cartera convencional en azul/celeste.
 
-## v0.14
+## v0.15
 - Custodia inicia en TODOS y conserva selección individual por custodio.
 - Diversificación ordenada de mayor a menor, con dos tonos de azul diferenciados.
 - Posiciones simplificada: se ocultan Custodio, Clase, Región y Sector.
 - Fix robusto del stress test en Riesgo ante variaciones del nombre de columna de impacto.
 - Se crea PRODUCT_BACKLOG.md y Evolución queda explícitamente pendiente de rediseño.
+
+## v0.15
+- En Diversificación, los títulos `Región` y `Sector` pasan arriba de cada gráfico.
+- Se eliminan los títulos verticales laterales de los ejes Y.
+- `Región`, `Sector` y `Cripto vs cartera convencional` usan la misma jerarquía tipográfica.

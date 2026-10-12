@@ -392,12 +392,14 @@ elif page=="Diversificación":
     ex=data["dashboard_exposicion_v2"].copy()
     c1,c2=st.columns(2)
     with c1:
+        st.markdown("### Región")
         r=ex[["Región","Valor USD_num","Peso_num"]].dropna(subset=["Región"]).sort_values("Valor USD_num",ascending=True)
         fig=px.bar(
             r,x="Valor USD_num",y="Región",orientation="h",hover_data={"Peso_num":":.1%"},
             labels={"Valor USD_num":"Valor USD"},
             color_discrete_sequence=["#79bff2"]
         )
+        fig.update_layout(yaxis_title=None)
         ev=st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points",key="region_chart")
         try:
             pts=ev.selection.points
@@ -405,12 +407,14 @@ elif page=="Diversificación":
                 set_context("Región",pts[0].get("y"))
         except Exception: pass
     with c2:
+        st.markdown("### Sector")
         s=ex[["Sector","Sector Valor USD_num","Sector Peso_num"]].dropna(subset=["Sector"]).sort_values("Sector Valor USD_num",ascending=True)
         fig=px.bar(
             s,x="Sector Valor USD_num",y="Sector",orientation="h",hover_data={"Sector Peso_num":":.1%"},
             labels={"Sector Valor USD_num":"Valor USD"},
             color_discrete_sequence=["#4f8fc7"]
         )
+        fig.update_layout(yaxis_title=None)
         ev2=st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points",key="sector_chart")
         try:
             pts=ev2.selection.points
