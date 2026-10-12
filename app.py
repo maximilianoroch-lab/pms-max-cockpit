@@ -64,7 +64,7 @@ with st.sidebar:
         key="tools_nav"
     )
     st.markdown("### IA")
-    ai_open=st.button("Asesor IA",use_container_width=True)
+    ai_open=st.button("Asesor IA",width='stretch')
     if ai_open:
         st.session_state["force_page"]="Asesor IA"
     if tool_page!="—":
@@ -96,11 +96,11 @@ with st.sidebar:
     ctx=st.session_state.get("analysis_context",{"dimension":"","value":""})
     if ctx.get("value"):
         st.info(f'Contexto: {ctx.get("dimension")} · {ctx.get("value")}')
-        if st.button("Limpiar contexto",use_container_width=True):
+        if st.button("Limpiar contexto",width='stretch'):
             st.session_state["analysis_context"]={"dimension":"","value":""}
             st.rerun()
 
-    if st.button("Actualizar datos",use_container_width=True):
+    if st.button("Actualizar datos",width='stretch'):
         st.cache_data.clear(); st.rerun()
     st.caption(f'Fuente: {PORTFOLIO["display_name"]} · {summary.get("last_market","—")}')
     try: has_key=bool(st.secrets.get("OPENAI_API_KEY",""))
@@ -240,7 +240,7 @@ def top_positions_table(limit=12):
     top_show["Variación_num"]=pct_points(top_show["Variación_num"])
     ev=st.dataframe(
         top_show,
-        hide_index=True,use_container_width=True,on_select="rerun",selection_mode="single-row",key=f"top_positions_{limit}",
+        hide_index=True,width='stretch',on_select="rerun",selection_mode="single-row",key=f"top_positions_{limit}",
         column_config={
             "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
             "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
@@ -362,8 +362,8 @@ def render_company_comparison(result):
         fig.update_traces(hovertemplate="<b>%{y}</b><br>"+a+": %{customdata[0]:.2f}x<br>"+b+": %{customdata[1]:.2f}x<br>Favorece: %{customdata[2]}<br>%{customdata[3]}<extra></extra>")
         fig.add_vline(x=0,line_width=1)
         fig.update_layout(height=330,xaxis_title=f"← favorece {a}   |   favorece {b} →",yaxis_title=None)
-        st.plotly_chart(fig,use_container_width=True)
-        st.dataframe(dfc[["Indicador",a,b,"Favorece"]],hide_index=True,use_container_width=True)
+        st.plotly_chart(fig,width='stretch')
+        st.dataframe(dfc[["Indicador",a,b,"Favorece"]],hide_index=True,width='stretch')
         fa=(dfc["Favorece"]==a).sum(); fb=(dfc["Favorece"]==b).sum(); fn=(dfc["Favorece"]=="Sin ventaja").sum()
         st.caption(f"Lectura rápida de estos múltiplos: {a} favorecido en {fa}, {b} en {fb}, sin ventaja clara en {fn}. Esto no constituye un ganador global.")
         with st.expander("Ayuda memoria de indicadores"):
@@ -401,7 +401,7 @@ if page=="Resumen":
         df=df[(df["Clase inversión"]!="Total")&df["Clase inversión"].notna()]
         fig=px.bar(df,x="Valor USD_num",y="Clase inversión",orientation="h",hover_data={"Peso_num":":.1%"},labels={"Valor USD_num":"Valor USD","Clase inversión":"Clase"})
         fig.update_layout(height=300,margin=dict(l=10,r=10,t=10,b=10))
-        st.plotly_chart(fig,use_container_width=True)
+        st.plotly_chart(fig,width='stretch')
     with c2:
         st.subheader("Mayores movimientos")
         app=data["app_feed_v2"].copy()
@@ -415,7 +415,7 @@ if page=="Resumen":
         m_show["Variación_num"]=pct_points(m_show["Variación_num"])
         st.dataframe(
             m_show,
-            hide_index=True,use_container_width=True,
+            hide_index=True,width='stretch',
             column_config={
                 "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
                 "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
@@ -459,7 +459,7 @@ elif page=="Diversificación":
             color_discrete_sequence=["#79bff2"]
         )
         fig.update_layout(yaxis_title=None)
-        ev=st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points",key="region_chart")
+        ev=st.plotly_chart(fig,width='stretch',on_select="rerun",selection_mode="points",key="region_chart")
         try:
             pts=ev.selection.points
             if pts:
@@ -474,7 +474,7 @@ elif page=="Diversificación":
             color_discrete_sequence=["#4f8fc7"]
         )
         fig.update_layout(yaxis_title=None)
-        ev2=st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points",key="sector_chart")
+        ev2=st.plotly_chart(fig,width='stretch',on_select="rerun",selection_mode="points",key="sector_chart")
         try:
             pts=ev2.selection.points
             if pts:
@@ -489,7 +489,7 @@ elif page=="Diversificación":
         detail_show["Peso cartera_num"]=pct_points(detail_show["Peso cartera_num"])
         st.dataframe(
             detail_show,
-            hide_index=True,use_container_width=True,
+            hide_index=True,width='stretch',
             column_config={
                 "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
                 "Peso cartera_num":st.column_config.NumberColumn("Peso cartera",format="%.1f%%"),
@@ -527,19 +527,19 @@ elif page=="Diversificación":
         margin=dict(l=10,r=10,t=10,b=10),
         legend_title_text="",
     )
-    st.plotly_chart(fig,use_container_width=True)
+    st.plotly_chart(fig,width='stretch')
 
 elif page=="Evolución":
     evo=data["dashboard_evolucion_v2"].copy()
     hist=evo[evo["Valor total USD_num"].gt(0)].copy()
     fig=px.line(hist,x="Fecha",y="Valor total USD_num",markers=True,labels={"Valor total USD_num":"Patrimonio USD"})
-    st.plotly_chart(fig,use_container_width=True)
+    st.plotly_chart(fig,width='stretch')
     st.caption("Patrimonio observado; todavía no se interpreta como retorno. Evolución queda pendiente de una versión más dinámica y representativa.")
     st.subheader("Top 15 activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
     top["Cotización"]=top.apply(quote_text,axis=1)
-    st.dataframe(top[["Ticker","Nombre","Valor USD_num","Peso_num","Cotización","Variación_num","Estado dato"]],hide_index=True,use_container_width=True)
+    st.dataframe(top[["Ticker","Nombre","Valor USD_num","Peso_num","Cotización","Variación_num","Estado dato"]],hide_index=True,width='stretch')
 
 elif page=="Riesgo":
     render_global_context_banner()
@@ -563,7 +563,7 @@ elif page=="Riesgo":
                 labels={impact_usd_col:"Impacto USD"},
                 color_discrete_sequence=["#d06a74"]
             )
-            st.plotly_chart(fig,use_container_width=True)
+            st.plotly_chart(fig,width='stretch')
         elif impact_pct_col:
             tmp=stress.copy()
             if "%" in impact_pct_col and not impact_pct_col.endswith("_num"):
@@ -576,13 +576,13 @@ elif page=="Riesgo":
                 labels={"_impact_pct":"Impacto cartera (%)"},
                 color_discrete_sequence=["#d06a74"]
             )
-            st.plotly_chart(fig,use_container_width=True)
+            st.plotly_chart(fig,width='stretch')
         else:
             st.info("Stress test disponible, pero la fuente no expone una columna de impacto graficable.")
     pending=risk[risk["Estado"].eq("HISTORIAL INSUFICIENTE")]
     if not pending.empty:
         st.subheader("Métricas aún no maduras")
-        st.dataframe(pending[["Métrica","Estado","Interpretación"]],hide_index=True,use_container_width=True)
+        st.dataframe(pending[["Métrica","Estado","Interpretación"]],hide_index=True,width='stretch')
 
     st.subheader("Concentración por posición")
     top_positions_table(15)
@@ -615,11 +615,11 @@ elif page=="Custodia":
         rows.head(15),x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
         labels={"Valor USD_num":"Valor USD"}
     )
-    st.plotly_chart(fig,use_container_width=True)
+    st.plotly_chart(fig,width='stretch')
     rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Valor USD_num","Peso custodio_num"]].copy()
     rows_show["Peso custodio_num"]=pct_points(rows_show["Peso custodio_num"])
     st.dataframe(
-        rows_show,hide_index=True,use_container_width=True,
+        rows_show,hide_index=True,width='stretch',
         column_config={
             "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
             "Peso custodio_num":st.column_config.NumberColumn("Peso custodio",format="%.1f%%"),
@@ -652,7 +652,7 @@ elif page=="Posiciones":
     view_show["Variación_num"]=pct_points(view_show["Variación_num"])
     pos_event=st.dataframe(
         view_show,
-        hide_index=True,use_container_width=True,height=700,
+        hide_index=True,width='stretch',height=700,
         on_select="rerun",selection_mode="single-row",key="positions_table",
         column_config={
             "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
@@ -726,7 +726,7 @@ elif page=="Simulador":
                 {"Métrica":"Top 5","Antes":sim["top5_before"]*100,"Después":sim["top5_after"]*100,"Unidad":"%"},
             ])
             fig=px.bar(simdf,x="Métrica",y=["Antes","Después"],barmode="group")
-            st.plotly_chart(fig,use_container_width=True)
+            st.plotly_chart(fig,width='stretch')
 
             if st.button("Pedir lectura al Asesor IA",key="sim_to_ai"):
                 st.session_state["force_page"]="Asesor IA"
@@ -764,6 +764,7 @@ La clave queda en Streamlit Secrets y no debe subirse a GitHub.
 """)
     else:
         st.success(f"Asesor IA configurado · modelo: {advisor_model}")
+        st.caption("Las consultas con fundamentales/noticias pueden consumir más API porque usan búsqueda web.")
         if st.button("Probar conexión IA",key="advisor_self_test"):
             with st.spinner("Probando conexión…"):
                 test_answer=ask_advisor(

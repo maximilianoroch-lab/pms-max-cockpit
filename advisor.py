@@ -1,6 +1,6 @@
 
 import os,json,pandas as pd
-from openai import OpenAI
+from openai import OpenAI, AuthenticationError, RateLimitError, APIConnectionError, BadRequestError
 from portfolio_config import PORTFOLIO
 
 SYSTEM_CONTEXT=f"""Sos el asesor analítico de {PORTFOLIO["display_name"]}. Contrastá decisiones con datos, reducí sesgos emocionales y marcá inconsistencias sin ser condescendiente.
@@ -77,14 +77,28 @@ def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker
     ctx["analysis_context"]=analysis_context or {}
     prompt="CONTEXTO ACTUAL DEL PMS:\n"+json.dumps(ctx,ensure_ascii=False,default=str)+"\n\nCONSULTA:\n"+user_prompt
     client=OpenAI(api_key=api_key)
-    response=client.responses.create(
-        model=model,
-        reasoning={"effort":"low"},
-        instructions=SYSTEM_CONTEXT,
-        input=messages+[{"role":"user","content":prompt}],
-        tools=[{"type":"web_search","search_context_size":"medium"}],
-    )
-    return response.output_text
+    try:
+        response=client.responses.create(
+            model=model,
+            reasoning={"effort":"low"},
+            instructions=SYSTEM_CONTEXT,
+            input=messages+[{"role":"user","content":prompt}],
+            tools=[{"type":"web_search","search_context_size":"medium"}],
+        )
+        return response.output_text
+    except AuthenticationError:
+        return "No pude autenticar la API de OpenAI. Revisá OPENAI_API_KEY en Streamlit Secrets."
+    except RateLimitError as e:
+        msg=str(e)
+        if "credit_balance_exhausted" in msg or "no credits remaining" in msg.lower():
+            return "La API está autenticada, pero no tiene saldo disponible. Cargá créditos en la cuenta de API de OpenAI."
+        return "La API alcanzó un límite temporal. Esperá unos segundos y volvé a intentar."
+    except APIConnectionError:
+        return "No pude conectarme con la API de OpenAI. Probá nuevamente en unos segundos."
+    except BadRequestError as e:
+        return f"La API rechazó la consulta. Detalle técnico: {str(e)[:220]}"
+    except Exception:
+        return "El Asesor IA encontró un error inesperado. El Dashboard sigue funcionando; revisá los logs si el problema se repite."
 
 
 def _extract_json(text):
@@ -105,7 +119,8 @@ def compare_companies_structured(ticker1,ticker2,data,filtered_positions,analysi
         api_key=os.getenv("OPENAI_API_KEY"); model=os.getenv("OPENAI_MODEL","gpt-5.6")
     if not api_key:
         return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":"Falta configurar OPENAI_API_KEY en Streamlit Secrets."}
-    ctx=compact(data,filtered_positions,selected_ticker)
+    ctx=compact(data,filtered_positions)
+    ctx["analysis_context"]=analysis_context or {}
     prompt=f"""Compará {ticker1} contra {ticker2} usando datos fundamentales actuales y verificables.
 Obligatorio: P/E, Forward P/E, PEG y EV/EBITDA. Si un dato no aplica o no es significativo, devolvé null.
 Usá búsqueda web. No inventes valores. Estos múltiplos son 'menor suele ser más favorable', pero no declares un ganador global sólo por eso.
@@ -119,12 +134,26 @@ Respondé SOLO JSON válido:
 {{"indicator":"EV/EBITDA","a":null,"b":null}}
 ],"analysis":"..."}}"""
     client=OpenAI(api_key=api_key)
-    r=client.responses.create(
-        model=model,
-        reasoning={"effort":"medium"},
-        instructions=SYSTEM_CONTEXT,
-        input=prompt,
-        tools=[{"type":"web_search","search_context_size":"medium"}],
-    )
+    try:
+        r=client.responses.create(
+            model=model,
+            reasoning={"effort":"medium"},
+            instructions=SYSTEM_CONTEXT,
+            input=prompt,
+            tools=[{"type":"web_search","search_context_size":"medium"}],
+        )
+    except AuthenticationError:
+        return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":"No pude autenticar la API de OpenAI. Revisá OPENAI_API_KEY en Streamlit Secrets."}
+    except RateLimitError as e:
+        msg=str(e)
+        if "credit_balance_exhausted" in msg or "no credits remaining" in msg.lower():
+            msg="La API está autenticada, pero no tiene saldo disponible."
+        else:
+            msg="La API alcanzó un límite temporal. Probá nuevamente en unos segundos."
+        return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":msg}
+    except APIConnectionError:
+        return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":"No pude conectarme con la API de OpenAI."}
+    except Exception:
+        return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":"No pude completar la comparación en este momento."}
     try:return _extract_json(r.output_text)
     except:return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":r.output_text or "No pude estructurar la comparación."}
