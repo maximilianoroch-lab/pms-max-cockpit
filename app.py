@@ -332,16 +332,14 @@ if page in ["Resumen","Diversificación","Evolución","Riesgo","Custodia","Posic
 
 if page=="Resumen":
     render_global_context_banner()
-    cols=st.columns([1.45,1.55,0.9,0.9,0.8])
+    cols=st.columns([1.55,1.0,1.0,0.9])
     with cols[0]:
         metric_card("Patrimonio total",fmt_usd(summary["total"]),"Incluye Crypto",summary.get("total_change"))
     with cols[1]:
-        split_wealth_card(summary["crypto"],summary["crypto_pct"],summary["non_crypto"])
-    with cols[2]:
         metric_card("Argentina",fmt_pct(summary["argentina_pct"]),"Exposición",summary.get("argentina_change"))
-    with cols[3]:
+    with cols[2]:
         metric_card("Top 5",fmt_pct(summary["top5_pct"]),"Concentración",summary.get("top5_change"))
-    with cols[4]:
+    with cols[3]:
         metric_card("Posiciones",str(int(summary["positions_count"])),f"Precios: {summary.get('price_update') if summary.get('price_update') not in ('nan','NaN','') else '—'}",None)
 
     c1,c2=st.columns([0.8,1.2])
@@ -415,6 +413,39 @@ elif page=="Diversificación":
                 "Peso cartera_num":st.column_config.NumberColumn("Peso cartera",format="%.1f%%"),
             }
         )
+
+
+    st.markdown("### Cripto vs cartera convencional")
+    total_port = float(summary["total"]) if pd.notna(summary.get("total")) else 0.0
+    crypto_port = float(summary["crypto"]) if pd.notna(summary.get("crypto")) else 0.0
+    conventional_port = max(total_port - crypto_port, 0.0)
+    pie_df = pd.DataFrame({
+        "Segmento":["Crypto","Cartera convencional"],
+        "Valor USD":[crypto_port, conventional_port]
+    })
+    pie_df["Peso"] = pie_df["Valor USD"] / pie_df["Valor USD"].sum() if pie_df["Valor USD"].sum() else 0.0
+    fig = px.pie(
+        pie_df,
+        names="Segmento",
+        values="Valor USD",
+        hole=0.52,
+        color="Segmento",
+        color_discrete_map={
+            "Crypto":"#5d1f35",
+            "Cartera convencional":"#5b8ecb"
+        },
+    )
+    fig.update_traces(
+        textposition="inside",
+        texttemplate="%{label}<br>US$ %{value:,.0f}<br>%{percent}",
+        hovertemplate="<b>%{label}</b><br>Valor: US$ %{value:,.0f}<br>Peso: %{percent}<extra></extra>"
+    )
+    fig.update_layout(
+        height=380,
+        margin=dict(l=10,r=10,t=10,b=10),
+        legend_title_text="",
+    )
+    st.plotly_chart(fig,use_container_width=True)
 
 elif page=="Evolución":
     evo=data["dashboard_evolucion_v2"].copy()
