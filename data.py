@@ -69,22 +69,116 @@ def _firstcol_map(df):
     return out
 
 def portfolio_summary(data):
-    hm=_firstcol_map(data["app_home"]); bm=_firstcol_map(data["app_banner"])
+    hm=_firstcol_map(data["app_home"])
+    bm=_firstcol_map(data["app_banner"])
+
     def val(name,p=False):
         r=hm.get(name)
         return parse_num(r.get("Valor",0))/100 if p and r is not None else parse_num(r.get("Valor",0)) if r is not None else 0
+
     def ch(name):
-        r=hm.get(name); return parse_num(r.get("Variación",0))/100 if r is not None else 0
-    app=data["app_feed_v2"]; last=""
+        r=hm.get(name)
+        return parse_num(r.get("Variación",0))/100 if r is not None else 0
+
+    app=data.get("app_feed_v2",pd.DataFrame()).copy()
+    expo=data.get("dashboard_exposicion_v2",pd.DataFrame()).copy()
+
+    last=""
     if not app.empty and "Fecha dato" in app:
         x=app["Fecha dato"].dropna().astype(str)
-        if not x.empty:last=x.iloc[0]
-    upd="";r=bm.get("Actualización de precios")
-    if r is not None:upd=str(r.get("Valor",""))
-    return {"non_crypto":val("Patrimonio sin Crypto"),"crypto":val("Crypto USD"),"crypto_pct":val("Crypto %",True),"total":val("Patrimonio total"),
-    "argentina_pct":val("Argentina %",True),"top5_pct":val("Top 5 %",True),"positions_count":val("Cantidad posiciones"),
-    "non_crypto_change":ch("Patrimonio sin Crypto"),"crypto_change":ch("Crypto %"),"total_change":ch("Patrimonio total"),
-    "argentina_change":ch("Argentina %"),"top5_change":ch("Top 5 %"),"price_update":upd,"last_market":last}
+        if not x.empty:
+            last=x.iloc[0]
+
+    upd=""
+    r=bm.get("Actualización de precios")
+    if r is not None:
+        upd=str(r.get("Valor",""))
+
+    # Primary current-state metrics derived from the detailed feed.
+    # This prevents a transient/incomplete HOME block from producing fake portfolio crashes.
+    feed_total=float(app["Valor USD_num"].sum()) if not app.empty and "Valor USD_num" in app.columns else 0.0
+    if not app.empty and "Clase" in app.columns:
+        feed_crypto=float(app.loc[app["Clase"].astype(str)=="Crypto","Valor USD_num"].sum())
+    else:
+        feed_crypto=0.0
+    feed_non_crypto=max(feed_total-feed_crypto,0.0)
+    feed_crypto_pct=(feed_crypto/feed_total) if feed_total else 0.0
+    feed_positions=int(app["Ticker"].dropna().astype(str).nunique()) if not app.empty and "Ticker" in app.columns else 0
+
+    # Top 5 from consolidated ticker values.
+    if not app.empty and "Ticker" in app.columns and "Valor USD_num" in app.columns and feed_total:
+        top5_values=app.groupby("Ticker")["Valor USD_num"].sum().sort_values(ascending=False).head(5).sum()
+        feed_top5=float(top5_values/feed_total)
+    else:
+        feed_top5=0.0
+
+    # Argentina uses the exposure feed, because it can include ETF look-through.
+    feed_argentina=0.0
+    if not expo.empty and "Región" in expo.columns:
+        ar=expo[expo["Región"].astype(str)=="Argentina"]
+        if not ar.empty:
+            if "Peso_num" in ar.columns:
+                feed_argentina=float(ar["Peso_num"].iloc[0])
+            elif "Valor USD_num" in ar.columns and feed_total:
+                feed_argentina=float(ar["Valor USD_num"].iloc[0]/feed_total)
+
+    # Compare HOME block vs detailed feed. HOME is useful for deltas/reference,
+    # but current-state values only survive if they reconcile.
+    home_total=val("Patrimonio total")
+    tolerance=max(5.0, feed_total*0.002) if feed_total else 5.0
+    reconciled=bool(feed_total and abs(home_total-feed_total)<=tolerance)
+
+    if reconciled:
+        total=home_total
+        non_crypto=val("Patrimonio sin Crypto")
+        crypto=val("Crypto USD")
+        crypto_pct=val("Crypto %",True)
+        argentina_pct=val("Argentina %",True)
+        top5_pct=val("Top 5 %",True)
+        positions_count=val("Cantidad posiciones")
+        total_change=ch("Patrimonio total")
+        non_crypto_change=ch("Patrimonio sin Crypto")
+        crypto_change=ch("Crypto %")
+        argentina_change=ch("Argentina %")
+        top5_change=ch("Top 5 %")
+        summary_source="HOME_RECONCILED"
+    else:
+        total=feed_total
+        non_crypto=feed_non_crypto
+        crypto=feed_crypto
+        crypto_pct=feed_crypto_pct
+        argentina_pct=feed_argentina
+        top5_pct=feed_top5
+        positions_count=feed_positions
+        # Suppress misleading deltas while HOME is transiently inconsistent.
+        total_change=None
+        non_crypto_change=None
+        crypto_change=None
+        argentina_change=None
+        top5_change=None
+        summary_source="DETAIL_FALLBACK"
+
+    return {
+        "non_crypto":non_crypto,
+        "crypto":crypto,
+        "crypto_pct":crypto_pct,
+        "total":total,
+        "argentina_pct":argentina_pct,
+        "top5_pct":top5_pct,
+        "positions_count":positions_count,
+        "non_crypto_change":non_crypto_change,
+        "crypto_change":crypto_change,
+        "total_change":total_change,
+        "argentina_change":argentina_change,
+        "top5_change":top5_change,
+        "price_update":upd,
+        "last_market":last,
+        "summary_source":summary_source,
+        "reconciled":reconciled,
+        "home_total":home_total,
+        "feed_total":feed_total,
+        "reconciliation_diff":home_total-feed_total,
+    }
 
 def enrich_positions(data): return data.get("looker_feed_v2",pd.DataFrame()).copy()
 

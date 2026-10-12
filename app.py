@@ -158,8 +158,10 @@ def compact_name(v,max_len=26):
     s=str(v or "")
     return s if len(s)<=max_len else s[:max_len-1]+"…"
 def change_html(v):
+    if v is None:
+        return '<span class="flat">—</span>'
     try:x=float(v)
-    except:x=0
+    except:return '<span class="flat">—</span>'
     if x>0:return f'<span class="up">▲ +{x*100:.1f}%</span>'
     if x<0:return f'<span class="down">▼ {x*100:.1f}%</span>'
     return '<span class="flat">→ 0,0%</span>'
@@ -371,6 +373,12 @@ if page in ["Resumen","Diversificación","Evolución","Riesgo","Custodia","Posic
 
 if page=="Resumen":
     render_global_context_banner()
+    if not summary.get("reconciled",True):
+        st.warning(
+            "La cabecera resumida de Google Sheets no reconcilia con el detalle en este instante. "
+            "El Dashboard está usando el detalle consolidado para evitar mostrar una caída ficticia; "
+            "las variaciones quedan temporalmente ocultas."
+        )
     cols=st.columns([1.55,1.0,1.0,0.9])
     with cols[0]:
         metric_card("Patrimonio total",fmt_usd(summary["total"]),"Incluye Crypto",summary.get("total_change"))
@@ -417,15 +425,17 @@ if page=="Resumen":
         look_df=data.get("looker_feed_v2",pd.DataFrame())
         app_total=float(app_df["Valor USD_num"].sum()) if not app_df.empty and "Valor USD_num" in app_df.columns else 0.0
         look_total=float(look_df["Valor USD_num"].sum()) if not look_df.empty and "Valor USD_num" in look_df.columns else 0.0
+        home_total=float(summary.get("home_total",0) or 0)
         diff=look_total-app_total
-        q1,q2,q3=st.columns(3)
-        q1.metric("Total app feed",fmt_usd(app_total))
-        q2.metric("Total detalle",fmt_usd(look_total))
-        q3.metric("Diferencia",fmt_usd(diff))
-        if abs(diff)<=1:
+        q1,q2,q3,q4=st.columns(4)
+        q1.metric("HOME",fmt_usd(home_total))
+        q2.metric("App feed",fmt_usd(app_total))
+        q3.metric("Detalle cuentas",fmt_usd(look_total))
+        q4.metric("Detalle - app",fmt_usd(diff))
+        if abs(diff)<=1 and summary.get("reconciled",False):
             st.success("Reconciliación de feeds: OK")
         else:
-            st.warning("Los feeds no reconcilian exactamente; revisar antes de interpretar diferencias pequeñas como rendimiento.")
+            st.warning("Hay una diferencia transitoria entre feeds. Se prioriza el detalle consolidado y se bloquean deltas inconsistentes.")
 
     st.subheader("Principales posiciones")
     st.caption("Seleccioná una fila para convertir ese activo en el ticker activo.")
