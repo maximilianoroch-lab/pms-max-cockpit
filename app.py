@@ -273,7 +273,7 @@ if page=="Resumen":
         ("Patrimonio total",fmt_usd(summary["total"]),"Incluye Crypto",summary.get("total_change")),
         ("Argentina",fmt_pct(summary["argentina_pct"]),"Exposición",summary.get("argentina_change")),
         ("Top 5",fmt_pct(summary["top5_pct"]),"Concentración",summary.get("top5_change")),
-        ("Posiciones",str(int(summary["positions_count"])),f"Precios: {summary.get('price_update','—')}",None),
+        ("Posiciones",str(int(summary["positions_count"])),f"Precios: {summary.get('price_update') if summary.get('price_update') not in ('nan','NaN','') else '—'}",None),
     ]
     for c,v in zip(cols,vals):
         with c: metric_card(*v)

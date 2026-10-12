@@ -32,6 +32,13 @@ def normalize(name,df):
         add_num(df,c)
     for c in ["Peso","Peso cartera","Peso custodio","Variación %","Impacto cartera %"]:
         add_num(df,c,pct=True)
+
+    # Aliases estables usados por la UI. Evitan depender del nombre literal
+    # generado a partir de columnas que contienen espacios o símbolos.
+    if "Variación %_num" in df.columns:
+        df["Variación_num"]=df["Variación %_num"]
+    if "Impacto cartera %_num" in df.columns:
+        df["Impacto cartera_num"]=df["Impacto cartera %_num"]
     if name=="dashboard_exposicion_v2":
         if "Valor USD.1" in df:add_num(df,"Valor USD.1","Sector Valor USD_num")
         else:df["Sector Valor USD_num"]=0
