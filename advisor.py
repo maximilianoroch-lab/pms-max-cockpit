@@ -1,5 +1,5 @@
 
-import os,json,pandas as pd
+import os,json,re,pandas as pd
 from openai import OpenAI, AuthenticationError, RateLimitError, APIConnectionError, BadRequestError
 from portfolio_config import PORTFOLIO
 
@@ -21,7 +21,14 @@ Separá claramente:
 2) Información externa consultada en la web.
 Para fundamentales, noticias, valuaciones o hechos recientes usá búsqueda web. No inventes datos.
 Cuando uses información externa, indicá fecha de referencia y dejá visibles las fuentes/citas aportadas por la búsqueda.
-No decidas por el usuario: presentá evidencia, contradicciones, riesgos y escenarios."""
+No decidas por el usuario: presentá evidencia, contradicciones, riesgos y escenarios.
+Reglas de calidad del análisis:
+- No declares una inconsistencia entre consolidado y cuentas si el contexto de detalle está filtrado, truncado o incompleto.
+- Para un ticker mencionado en la consulta, usá el detalle completo por cuentas incluido en mentioned_ticker_details.
+- Si una cifra interna no reconcilia, distinguí entre "dato faltante en el contexto" e "inconsistencia real".
+- Por defecto respondé en modo ejecutivo: diagnóstico corto, datos clave, riesgos/contradicciones y conclusión condicionada. Evitá informes de cientos de líneas salvo que el usuario pida profundidad.
+- Priorizá 5 a 8 hallazgos materiales. No repitas la misma idea en varias secciones.
+"""
 
 def build_action_prompt(action,p):
     m={
@@ -34,7 +41,7 @@ def build_action_prompt(action,p):
     "Simular operación":f"Simulá el impacto de {p.get('operation','').lower()} US$ {p.get('amount',0):.0f} de {p.get('ticker')} sobre pesos, concentración y exposiciones. No ejecutes nada."}
     return m.get(action,"")
 
-def compact(data,filtered,selected_ticker=""):
+def compact(data,filtered,selected_ticker="",user_prompt=""):
     app=data.get("app_feed_v2",pd.DataFrame()).copy();risk=data.get("dashboard_riesgo_v2",pd.DataFrame()).copy();expo=data.get("dashboard_exposicion_v2",pd.DataFrame()).copy()
     top=[]
     if not app.empty:
@@ -59,7 +66,42 @@ def compact(data,filtered,selected_ticker=""):
         if not pp.empty:
             selected["Custodios"]=sorted(pp["Custodio"].dropna().astype(str).unique().tolist())
             selected["Cuentas"]=sorted(pp["Cuenta"].dropna().astype(str).unique().tolist())
-    return {"top_positions":top,"filtered_positions":f,"selected_ticker":selected,"risk":risk.head(25).fillna("").to_dict("records"),"exposure":expo.head(20).fillna("").to_dict("records")}
+    mentioned=[]
+    detail_full=data.get("looker_feed_v2",pd.DataFrame()).copy()
+    prompt_upper=str(user_prompt or "").upper()
+    known_tickers=[]
+    if not app.empty and "Ticker" in app.columns:
+        known_tickers=sorted(app["Ticker"].dropna().astype(str).unique().tolist(),key=len,reverse=True)
+    for t in known_tickers:
+        # Token-aware enough for portfolio tickers; avoids matching T inside arbitrary words.
+        if re.search(r"(?<![A-Z0-9])"+re.escape(t.upper())+r"(?![A-Z0-9])",prompt_upper):
+            mentioned.append(t)
+    if selected_ticker and selected_ticker not in mentioned:
+        mentioned.append(selected_ticker)
+
+    mentioned_details={}
+    if mentioned and not detail_full.empty and "Ticker" in detail_full.columns:
+        for t in mentioned:
+            dd=detail_full[detail_full["Ticker"].astype(str)==str(t)].copy()
+            cols=[c for c in ["Ticker","Nombre","Custodio","Cuenta","Cantidad","Valor USD_num","Peso cartera_num",
+                              "Clase","Tipo","Región directa","Sector directo","Estado dato","Variación_num"] if c in dd.columns]
+            if not dd.empty:
+                mentioned_details[t]={
+                    "rows":dd[cols].sort_values("Valor USD_num",ascending=False).fillna("").to_dict("records"),
+                    "detail_total_usd":float(dd["Valor USD_num"].sum()) if "Valor USD_num" in dd.columns else None,
+                    "accounts":sorted(dd["Cuenta"].dropna().astype(str).unique().tolist()) if "Cuenta" in dd.columns else [],
+                    "custodians":sorted(dd["Custodio"].dropna().astype(str).unique().tolist()) if "Custodio" in dd.columns else []
+                }
+
+    return {
+        "top_positions":top,
+        "filtered_positions":f,
+        "selected_ticker":selected,
+        "mentioned_tickers":mentioned,
+        "mentioned_ticker_details":mentioned_details,
+        "risk":risk.head(25).fillna("").to_dict("records"),
+        "exposure":expo.head(20).fillna("").to_dict("records")
+    }
 
 def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker="",analysis_context=None):
     try:
@@ -70,12 +112,17 @@ def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker
         api_key=os.getenv("OPENAI_API_KEY");model=os.getenv("OPENAI_MODEL","gpt-5.6")
     if not api_key:
         return "El dashboard funciona, pero el Asesor IA todavía no tiene OPENAI_API_KEY configurada en los Secrets de Streamlit."
-    ctx=compact(data,filtered_positions,selected_ticker)
+    ctx=compact(data,filtered_positions,selected_ticker,user_prompt=user_prompt)
     messages=[]
     for m in (history or [])[-6:]:
         if m.get("role") in ("user","assistant"):messages.append({"role":m["role"],"content":m["content"]})
     ctx["analysis_context"]=analysis_context or {}
-    prompt="CONTEXTO ACTUAL DEL PMS:\n"+json.dumps(ctx,ensure_ascii=False,default=str)+"\n\nCONSULTA:\n"+user_prompt
+    prompt=(
+        "CONTEXTO ACTUAL DEL PMS:\n"+json.dumps(ctx,ensure_ascii=False,default=str)
+        +"\n\nCONSULTA:\n"+user_prompt
+        +"\n\nFORMATO POR DEFECTO: respuesta ejecutiva y accionable, aproximadamente 600-1000 palabras máximo, "
+         "salvo que la consulta pida explícitamente un análisis profundo. No repitas conclusiones."
+    )
     client=OpenAI(api_key=api_key)
     try:
         response=client.responses.create(
@@ -119,7 +166,7 @@ def compare_companies_structured(ticker1,ticker2,data,filtered_positions,analysi
         api_key=os.getenv("OPENAI_API_KEY"); model=os.getenv("OPENAI_MODEL","gpt-5.6")
     if not api_key:
         return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":"Falta configurar OPENAI_API_KEY en Streamlit Secrets."}
-    ctx=compact(data,filtered_positions)
+    ctx=compact(data,filtered_positions,user_prompt=f'{ticker1} {ticker2}')
     ctx["analysis_context"]=analysis_context or {}
     prompt=f"""Compará {ticker1} contra {ticker2} usando datos fundamentales actuales y verificables.
 Obligatorio: P/E, Forward P/E, PEG y EV/EBITDA. Si un dato no aplica o no es significativo, devolvé null.
