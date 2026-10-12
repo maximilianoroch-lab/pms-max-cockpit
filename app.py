@@ -105,7 +105,12 @@ with st.sidebar:
     st.caption(f'Fuente: {PORTFOLIO["display_name"]} · {summary.get("last_market","—")}')
     try: has_key=bool(st.secrets.get("OPENAI_API_KEY",""))
     except Exception: has_key=False
-    st.caption("Asesor IA: "+("configurado" if has_key else "pendiente de API key"))
+    if has_key:
+        try: active_model=st.secrets.get("OPENAI_MODEL","gpt-5.6")
+        except Exception: active_model="gpt-5.6"
+        st.caption(f"Asesor IA: configurado · {active_model}")
+    else:
+        st.caption("Asesor IA: pendiente de API key")
 
 def fmt_usd(x):
     try:
@@ -738,10 +743,38 @@ elif page=="Asesor IA":
     st.caption("Conversación libre y análisis contextual. Comparador y Simulador también tienen páginas propias.")
     try:
         advisor_ready=bool(st.secrets.get("OPENAI_API_KEY",""))
+        advisor_model=st.secrets.get("OPENAI_MODEL","gpt-5.6")
     except Exception:
         advisor_ready=False
+        advisor_model="gpt-5.6"
+
     if not advisor_ready:
-        st.warning("El Asesor IA todavía no está activado. El Dashboard y las herramientas determinísticas funcionan normalmente; la IA se habilita agregando OPENAI_API_KEY en Streamlit Secrets.")
+        st.warning("El Asesor IA todavía no está activado. El Dashboard y las herramientas determinísticas funcionan normalmente.")
+        with st.expander("Cómo activar el Asesor IA"):
+            st.markdown("""
+1. En Streamlit Cloud abrí **Manage app → Settings → Secrets**.
+2. Agregá:
+```toml
+OPENAI_API_KEY = "tu_clave"
+OPENAI_MODEL = "gpt-5.6"
+```
+3. Guardá los Secrets y reiniciá la app.
+
+La clave queda en Streamlit Secrets y no debe subirse a GitHub.
+""")
+    else:
+        st.success(f"Asesor IA configurado · modelo: {advisor_model}")
+        if st.button("Probar conexión IA",key="advisor_self_test"):
+            with st.spinner("Probando conexión…"):
+                test_answer=ask_advisor(
+                    "Respondé solamente: CONEXIÓN OK. No uses búsqueda web para esta prueba.",
+                    data,
+                    filtered,
+                    history=[],
+                    selected_ticker=st.session_state.get("active_ticker",""),
+                    analysis_context=st.session_state.get("analysis_context",{})
+                )
+            st.info(test_answer)
     ctx=st.session_state.get("analysis_context",{"dimension":"","value":""})
     if ctx.get("value"):
         st.success(f'Contexto analítico activo: {ctx.get("dimension")} · {ctx.get("value")}')

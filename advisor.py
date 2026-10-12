@@ -16,7 +16,11 @@ Reglas de esta cartera:
 - Fines de semana/feriados aceptan último valor válido.
 - No uses TWR, XIRR ni Modified Dietz salvo pedido explícito.
 - No trates volatilidad/drawdown/correlaciones como maduras si el PMS marca historial insuficiente.
-Separá datos internos de información externa. Para fundamentales, noticias, valuaciones o hechos recientes usá búsqueda web. No inventes datos.
+Separá claramente:
+1) Datos internos de PMS Max.
+2) Información externa consultada en la web.
+Para fundamentales, noticias, valuaciones o hechos recientes usá búsqueda web. No inventes datos.
+Cuando uses información externa, indicá fecha de referencia y dejá visibles las fuentes/citas aportadas por la búsqueda.
 No decidas por el usuario: presentá evidencia, contradicciones, riesgos y escenarios."""
 
 def build_action_prompt(action,p):
@@ -61,9 +65,9 @@ def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker
     try:
         import streamlit as st
         api_key=st.secrets.get("OPENAI_API_KEY",os.getenv("OPENAI_API_KEY"))
-        model=st.secrets.get("OPENAI_MODEL",os.getenv("OPENAI_MODEL","gpt-5.1"))
+        model=st.secrets.get("OPENAI_MODEL",os.getenv("OPENAI_MODEL","gpt-5.6"))
     except Exception:
-        api_key=os.getenv("OPENAI_API_KEY");model=os.getenv("OPENAI_MODEL","gpt-5.1")
+        api_key=os.getenv("OPENAI_API_KEY");model=os.getenv("OPENAI_MODEL","gpt-5.6")
     if not api_key:
         return "El dashboard funciona, pero el Asesor IA todavía no tiene OPENAI_API_KEY configurada en los Secrets de Streamlit."
     ctx=compact(data,filtered_positions,selected_ticker)
@@ -73,7 +77,13 @@ def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker
     ctx["analysis_context"]=analysis_context or {}
     prompt="CONTEXTO ACTUAL DEL PMS:\n"+json.dumps(ctx,ensure_ascii=False,default=str)+"\n\nCONSULTA:\n"+user_prompt
     client=OpenAI(api_key=api_key)
-    response=client.responses.create(model=model,instructions=SYSTEM_CONTEXT,input=messages+[{"role":"user","content":prompt}],tools=[{"type":"web_search"}])
+    response=client.responses.create(
+        model=model,
+        reasoning={"effort":"low"},
+        instructions=SYSTEM_CONTEXT,
+        input=messages+[{"role":"user","content":prompt}],
+        tools=[{"type":"web_search","search_context_size":"medium"}],
+    )
     return response.output_text
 
 
@@ -90,9 +100,9 @@ def compare_companies_structured(ticker1,ticker2,data,filtered_positions,analysi
     try:
         import streamlit as st
         api_key=st.secrets.get("OPENAI_API_KEY",os.getenv("OPENAI_API_KEY"))
-        model=st.secrets.get("OPENAI_MODEL",os.getenv("OPENAI_MODEL","gpt-5.1"))
+        model=st.secrets.get("OPENAI_MODEL",os.getenv("OPENAI_MODEL","gpt-5.6"))
     except Exception:
-        api_key=os.getenv("OPENAI_API_KEY"); model=os.getenv("OPENAI_MODEL","gpt-5.1")
+        api_key=os.getenv("OPENAI_API_KEY"); model=os.getenv("OPENAI_MODEL","gpt-5.6")
     if not api_key:
         return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":"Falta configurar OPENAI_API_KEY en Streamlit Secrets."}
     ctx=compact(data,filtered_positions,selected_ticker)
@@ -109,6 +119,12 @@ Respondé SOLO JSON válido:
 {{"indicator":"EV/EBITDA","a":null,"b":null}}
 ],"analysis":"..."}}"""
     client=OpenAI(api_key=api_key)
-    r=client.responses.create(model=model,instructions=SYSTEM_CONTEXT,input=prompt,tools=[{"type":"web_search"}])
+    r=client.responses.create(
+        model=model,
+        reasoning={"effort":"medium"},
+        instructions=SYSTEM_CONTEXT,
+        input=prompt,
+        tools=[{"type":"web_search","search_context_size":"medium"}],
+    )
     try:return _extract_json(r.output_text)
     except:return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":r.output_text or "No pude estructurar la comparación."}

@@ -6,7 +6,7 @@
 4. En Settings > Secrets:
 ```toml
 OPENAI_API_KEY = "..."
-# OPENAI_MODEL = "gpt-5.1"
+# OPENAI_MODEL = "gpt-5.6"
 ```
 5. Reiniciar la app.
 
