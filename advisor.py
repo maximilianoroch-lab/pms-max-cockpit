@@ -28,10 +28,10 @@ Reglas de calidad del análisis:
 - Para un ticker mencionado en la consulta, usá `mentioned_ticker_details` como detalle por cuentas, pero no lo uses para auditar o reconciliar el consolidado salvo que el PMS lo marque como control verificado.
 - Si falta una fila o una cuenta en el contexto, tratala como "detalle no visible/no disponible", nunca como discrepancia confirmada.
 - Formato obligatorio por defecto:
-  1) `## Resumen ejecutivo`: 5 a 7 bullets, máximo 120 palabras.
-  2) `## Desarrollo`: máximo 4 secciones, sólo evidencia y razonamiento que agreguen algo al resumen.
-  3) `## Conclusión`: 1 párrafo corto, condicionado y sin repetir todos los bullets.
-- Extensión total objetivo por defecto: 600 a 750 palabras. Si el usuario pide profundidad, ampliar hasta aproximadamente 1.200 palabras.
+  1) `## Resumen ejecutivo`: 4 a 6 bullets, máximo 90 palabras.
+  2) `## Desarrollo`: máximo 3 secciones, sólo evidencia y razonamiento que agreguen algo al resumen.
+  3) `## Conclusión`: 1 párrafo de 40 a 60 palabras, condicionado y sin repetir los bullets.
+- Extensión total objetivo por defecto: 350 a 500 palabras. Si el usuario pide profundidad, ampliar hasta aproximadamente 900 a 1.200 palabras.
 - Priorizá 5 a 8 hallazgos materiales. No repitas la misma idea en varias secciones.
 """
 
