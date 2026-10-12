@@ -23,10 +23,15 @@ Para fundamentales, noticias, valuaciones o hechos recientes usá búsqueda web.
 Cuando uses información externa, indicá fecha de referencia y dejá visibles las fuentes/citas aportadas por la búsqueda.
 No decidas por el usuario: presentá evidencia, contradicciones, riesgos y escenarios.
 Reglas de calidad del análisis:
-- No declares una inconsistencia entre consolidado y cuentas si el contexto de detalle está filtrado, truncado o incompleto.
-- Para un ticker mencionado en la consulta, usá el detalle completo por cuentas incluido en mentioned_ticker_details.
-- Si una cifra interna no reconcilia, distinguí entre "dato faltante en el contexto" e "inconsistencia real".
-- Por defecto respondé en modo ejecutivo: diagnóstico corto, datos clave, riesgos/contradicciones y conclusión condicionada. Evitá informes de cientos de líneas salvo que el usuario pida profundidad.
+- NO generes alertas de inconsistencia comparando por tu cuenta `app_feed_v2`, `filtered_positions` y `looker_feed_v2`. Esos feeds pueden tener alcances distintos.
+- Sólo llamá "inconsistencia" a un problema que venga marcado explícitamente por el PMS en un campo/alerta de calidad de datos. Si no existe esa alerta explícita, no la inventes.
+- Para un ticker mencionado en la consulta, usá `mentioned_ticker_details` como detalle por cuentas, pero no lo uses para auditar o reconciliar el consolidado salvo que el PMS lo marque como control verificado.
+- Si falta una fila o una cuenta en el contexto, tratala como "detalle no visible/no disponible", nunca como discrepancia confirmada.
+- Formato obligatorio por defecto:
+  1) `## Resumen ejecutivo`: 5 a 7 bullets, máximo 120 palabras.
+  2) `## Desarrollo`: máximo 4 secciones, sólo evidencia y razonamiento que agreguen algo al resumen.
+  3) `## Conclusión`: 1 párrafo corto, condicionado y sin repetir todos los bullets.
+- Extensión total objetivo por defecto: 600 a 750 palabras. Si el usuario pide profundidad, ampliar hasta aproximadamente 1.200 palabras.
 - Priorizá 5 a 8 hallazgos materiales. No repitas la misma idea en varias secciones.
 """
 
@@ -95,10 +100,15 @@ def compact(data,filtered,selected_ticker="",user_prompt=""):
 
     return {
         "top_positions":top,
-        "filtered_positions":f,
+        "filtered_positions_partial_DO_NOT_RECONCILE":f,
         "selected_ticker":selected,
         "mentioned_tickers":mentioned,
         "mentioned_ticker_details":mentioned_details,
+        "context_rules":{
+            "filtered_positions_is_partial": True,
+            "do_not_reconcile_feeds": True,
+            "only_surface_verified_data_quality_alerts": True
+        },
         "risk":risk.head(25).fillna("").to_dict("records"),
         "exposure":expo.head(20).fillna("").to_dict("records")
     }
@@ -120,8 +130,12 @@ def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker
     prompt=(
         "CONTEXTO ACTUAL DEL PMS:\n"+json.dumps(ctx,ensure_ascii=False,default=str)
         +"\n\nCONSULTA:\n"+user_prompt
-        +"\n\nFORMATO POR DEFECTO: respuesta ejecutiva y accionable, aproximadamente 600-1000 palabras máximo, "
-         "salvo que la consulta pida explícitamente un análisis profundo. No repitas conclusiones."
+        +"\n\nFORMATO OBLIGATORIO POR DEFECTO: "
+         "abrí con `## Resumen ejecutivo` de 5 a 7 bullets y máximo 120 palabras; "
+         "seguí con `## Desarrollo` de hasta 4 secciones; cerrá con `## Conclusión` de un párrafo corto. "
+         "La respuesta completa debe quedar entre 700 y 900 palabras y NO superar 1.000 palabras, "
+         "salvo que el usuario pida explícitamente mayor profundidad. "
+         "No audites ni reconcilies feeds entre sí y no inventes inconsistencias. No repitas conclusiones."
     )
     client=OpenAI(api_key=api_key)
     try:
