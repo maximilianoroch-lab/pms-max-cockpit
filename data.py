@@ -28,6 +28,7 @@ def add_num(df,col,new=None,pct=False):
 
 def normalize(name,df):
     df=df.copy()
+    df.columns=[str(c).strip() for c in df.columns]
     for c in ["Valor USD","Valor total USD","Impacto USD","Cotización local","Valor ref USD","Cantidad"]:
         add_num(df,c)
     for c in ["Peso","Peso cartera","Peso custodio","Variación %","Impacto cartera %"]:
@@ -39,6 +40,8 @@ def normalize(name,df):
         df["Variación_num"]=df["Variación %_num"]
     if "Impacto cartera %_num" in df.columns:
         df["Impacto cartera_num"]=df["Impacto cartera %_num"]
+    if "Impacto USD" in df.columns and "Impacto USD_num" not in df.columns:
+        add_num(df,"Impacto USD","Impacto USD_num")
     if name=="dashboard_exposicion_v2":
         if "Valor USD.1" in df:add_num(df,"Valor USD.1","Sector Valor USD_num")
         else:df["Sector Valor USD_num"]=0

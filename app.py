@@ -134,6 +134,16 @@ def pct_points(series):
     except:
         return series
 
+def local_num(v):
+    s=str(v).replace("$","").replace("%","").strip()
+    if s in ("","nan","None"): return 0.0
+    if "," in s and "." in s:
+        s=s.replace(".","").replace(",",".") if s.rfind(",")>s.rfind(".") else s.replace(",","")
+    elif "," in s:
+        s=s.replace(",",".")
+    try: return float(s)
+    except: return 0.0
+
 def compact_status(v):
     s=str(v or "")
     repl={
@@ -382,8 +392,12 @@ elif page=="Diversificación":
     ex=data["dashboard_exposicion_v2"].copy()
     c1,c2=st.columns(2)
     with c1:
-        r=ex[["Región","Valor USD_num","Peso_num"]].dropna(subset=["Región"])
-        fig=px.bar(r,x="Valor USD_num",y="Región",orientation="h",hover_data={"Peso_num":":.1%"},labels={"Valor USD_num":"Valor USD"})
+        r=ex[["Región","Valor USD_num","Peso_num"]].dropna(subset=["Región"]).sort_values("Valor USD_num",ascending=True)
+        fig=px.bar(
+            r,x="Valor USD_num",y="Región",orientation="h",hover_data={"Peso_num":":.1%"},
+            labels={"Valor USD_num":"Valor USD"},
+            color_discrete_sequence=["#79bff2"]
+        )
         ev=st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points",key="region_chart")
         try:
             pts=ev.selection.points
@@ -391,8 +405,12 @@ elif page=="Diversificación":
                 set_context("Región",pts[0].get("y"))
         except Exception: pass
     with c2:
-        s=ex[["Sector","Sector Valor USD_num","Sector Peso_num"]].dropna(subset=["Sector"])
-        fig=px.bar(s,x="Sector Valor USD_num",y="Sector",orientation="h",hover_data={"Sector Peso_num":":.1%"},labels={"Sector Valor USD_num":"Valor USD"})
+        s=ex[["Sector","Sector Valor USD_num","Sector Peso_num"]].dropna(subset=["Sector"]).sort_values("Sector Valor USD_num",ascending=True)
+        fig=px.bar(
+            s,x="Sector Valor USD_num",y="Sector",orientation="h",hover_data={"Sector Peso_num":":.1%"},
+            labels={"Sector Valor USD_num":"Valor USD"},
+            color_discrete_sequence=["#4f8fc7"]
+        )
         ev2=st.plotly_chart(fig,use_container_width=True,on_select="rerun",selection_mode="points",key="sector_chart")
         try:
             pts=ev2.selection.points
@@ -452,7 +470,7 @@ elif page=="Evolución":
     hist=evo[evo["Valor total USD_num"].gt(0)].copy()
     fig=px.line(hist,x="Fecha",y="Valor total USD_num",markers=True,labels={"Valor total USD_num":"Patrimonio USD"})
     st.plotly_chart(fig,use_container_width=True)
-    st.caption("Patrimonio observado; todavía no se interpreta como retorno.")
+    st.caption("Patrimonio observado; todavía no se interpreta como retorno. Evolución queda pendiente de una versión más dinámica y representativa.")
     st.subheader("Top 15 activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
@@ -468,8 +486,35 @@ elif page=="Riesgo":
         with c: st.metric(r["Métrica"],r["Valor"])
     stress=risk[risk["Métrica"].isin(["Argentina","Crypto","Tecnología / Nasdaq proxy","Combinado"])].copy()
     if not stress.empty:
-        fig=px.bar(stress,x="Impacto USD_num",y="Métrica",orientation="h")
-        st.plotly_chart(fig,use_container_width=True)
+        impact_usd_col=next((c for c in stress.columns if c.strip().lower() in ["impacto usd_num","impacto usd"]),None)
+        impact_pct_col=next((c for c in stress.columns if c.strip().lower() in ["impacto cartera_num","impacto cartera %_num","impacto cartera %"]),None)
+
+        if impact_usd_col:
+            if impact_usd_col=="Impacto USD":
+                stress["_impact_usd"]=stress[impact_usd_col].map(local_num)
+                impact_usd_col="_impact_usd"
+            stress=stress.sort_values(impact_usd_col,ascending=True)
+            fig=px.bar(
+                stress,x=impact_usd_col,y="Métrica",orientation="h",
+                labels={impact_usd_col:"Impacto USD"},
+                color_discrete_sequence=["#d06a74"]
+            )
+            st.plotly_chart(fig,use_container_width=True)
+        elif impact_pct_col:
+            tmp=stress.copy()
+            if "%" in impact_pct_col and not impact_pct_col.endswith("_num"):
+                tmp["_impact_pct"]=tmp[impact_pct_col].map(local_num)
+            else:
+                tmp["_impact_pct"]=pd.to_numeric(tmp[impact_pct_col],errors="coerce")*100
+            tmp=tmp.sort_values("_impact_pct",ascending=True)
+            fig=px.bar(
+                tmp,x="_impact_pct",y="Métrica",orientation="h",
+                labels={"_impact_pct":"Impacto cartera (%)"},
+                color_discrete_sequence=["#d06a74"]
+            )
+            st.plotly_chart(fig,use_container_width=True)
+        else:
+            st.info("Stress test disponible, pero la fuente no expone una columna de impacto graficable.")
     pending=risk[risk["Estado"].eq("HISTORIAL INSUFICIENTE")]
     if not pending.empty:
         st.subheader("Métricas aún no maduras")
@@ -481,14 +526,31 @@ elif page=="Riesgo":
 elif page=="Custodia":
     summ=data["app_custodia_resumen_v2"].copy()
     detail=data["app_custodia_detalle_v2"].copy()
-    cust=st.selectbox("Custodio",summ["Custodio"].tolist())
-    s=summ[summ["Custodio"]==cust].iloc[0]
-    a,b,c=st.columns(3)
-    a.metric("Valor",fmt_usd(s["Valor USD_num"]))
-    b.metric("Peso cartera",fmt_pct(s["Peso cartera_num"]))
-    c.metric("Cuentas",int(s["Cantidad cuentas_num"]))
-    rows=detail[detail["Custodio"]==cust].copy().sort_values("Valor USD_num",ascending=False)
-    fig=px.bar(rows.head(15),x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h")
+    cust_options=["TODOS"]+summ["Custodio"].dropna().astype(str).tolist()
+    cust=st.selectbox("Custodio",cust_options,index=0)
+
+    if cust=="TODOS":
+        st.session_state["analysis_context"]={"dimension":"","value":""}
+        total_val=float(summ["Valor USD_num"].sum()) if "Valor USD_num" in summ.columns else float(detail["Valor USD_num"].sum())
+        total_accounts=int(summ["Cantidad cuentas_num"].sum()) if "Cantidad cuentas_num" in summ.columns else int(detail["Cuenta"].nunique())
+        a,b,c=st.columns(3)
+        a.metric("Valor",fmt_usd(total_val))
+        b.metric("Peso cartera","100,0%")
+        c.metric("Cuentas",total_accounts)
+        rows=detail.copy().sort_values("Valor USD_num",ascending=False)
+    else:
+        st.session_state["analysis_context"]={"dimension":"Custodio","value":cust}
+        s=summ[summ["Custodio"]==cust].iloc[0]
+        a,b,c=st.columns(3)
+        a.metric("Valor",fmt_usd(s["Valor USD_num"]))
+        b.metric("Peso cartera",fmt_pct(s["Peso cartera_num"]))
+        c.metric("Cuentas",int(s["Cantidad cuentas_num"]))
+        rows=detail[detail["Custodio"]==cust].copy().sort_values("Valor USD_num",ascending=False)
+
+    fig=px.bar(
+        rows.head(15),x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
+        labels={"Valor USD_num":"Valor USD"}
+    )
     st.plotly_chart(fig,use_container_width=True)
     rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Valor USD_num","Peso custodio_num"]].copy()
     rows_show["Peso custodio_num"]=pct_points(rows_show["Peso custodio_num"])
@@ -508,7 +570,7 @@ elif page=="Posiciones":
         view=view[view["Ticker"].astype(str).str.lower().str.contains(q,na=False)|view["Nombre"].astype(str).str.lower().str.contains(q,na=False)]
     view=view.sort_values("Valor USD_num",ascending=False)
     st.caption(f"{len(view)} filas · {fmt_usd(view['Valor USD_num'].sum())}")
-    view_show=view[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num","Variación_num","Estado dato"]].copy()
+    view_show=view[["Ticker","Nombre","Cuenta","Tipo","Valor USD_num","Peso cartera_num","Variación_num","Estado dato"]].copy()
     view_show["Peso cartera_num"]=pct_points(view_show["Peso cartera_num"])
     view_show["Variación_num"]=pct_points(view_show["Variación_num"])
     pos_event=st.dataframe(
