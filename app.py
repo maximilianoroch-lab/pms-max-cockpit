@@ -34,6 +34,17 @@ positions=enrich_positions(data)
 if "analysis_context" not in st.session_state:
     st.session_state["analysis_context"]={"dimension":"","value":""}
 
+def apply_analysis_context(df):
+    ctx=st.session_state.get("analysis_context",{"dimension":"","value":""})
+    dim,val=ctx.get("dimension",""),ctx.get("value","")
+    if df is None or df.empty or not val:
+        return df
+    colmap={"Región":"Región directa","Sector":"Sector directo","Custodio":"Custodio","Clase":"Clase","Tipo":"Tipo"}
+    col=colmap.get(dim)
+    if col and col in df.columns:
+        return df[df[col].astype(str)==str(val)].copy()
+    return df
+
 with st.sidebar:
     st.title(PORTFOLIO["display_name"])
     st.caption("Cockpit · análisis + asesor IA")
@@ -135,16 +146,6 @@ def active_ticker_snapshot(ticker):
         "Cuentas": ", ".join(sorted(p["Cuenta"].dropna().astype(str).unique())) if not p.empty else "",
     }
 
-def apply_analysis_context(df):
-    ctx=st.session_state.get("analysis_context",{"dimension":"","value":""})
-    dim,val=ctx.get("dimension",""),ctx.get("value","")
-    if df is None or df.empty or not val:
-        return df
-    colmap={"Región":"Región directa","Sector":"Sector directo","Custodio":"Custodio","Clase":"Clase","Tipo":"Tipo"}
-    col=colmap.get(dim)
-    if col and col in df.columns:
-        return df[df[col].astype(str)==str(val)].copy()
-    return df
 
 def set_context(dim,value):
     st.session_state["analysis_context"]={"dimension":dim,"value":str(value)}
