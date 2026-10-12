@@ -261,35 +261,64 @@ def render_active_context():
     st.caption(f'{snap["Clase"]} · {snap["Tipo"]} · {snap["Región"]} · {snap["Sector"]} · Custodio(s): {snap["Custodios"] or "—"} · Cuenta(s): {snap["Cuentas"] or "—"}')
 
 
-def simulate_trade(ticker, operation, amount):
+def simulate_trade(ticker, operation, amount, funding_mode="Reasignación interna"):
     app_df=data.get("app_feed_v2",pd.DataFrame()).copy()
     if app_df.empty:
         return None
-    total=float(app_df["Valor USD_num"].sum())
-    row=app_df[app_df["Ticker"].astype(str)==str(ticker)]
-    current=float(row["Valor USD_num"].sum()) if not row.empty else 0.0
+
+    vals=app_df[["Ticker","Valor USD_num"]].dropna().groupby("Ticker",as_index=False)["Valor USD_num"].sum()
+    total=float(vals["Valor USD_num"].sum())
+    current=float(vals.loc[vals["Ticker"].astype(str)==str(ticker),"Valor USD_num"].sum())
+    cash_before=float(vals.loc[vals["Ticker"].astype(str)=="CASH","Valor USD_num"].sum())
+
     sign=1 if operation=="Comprar" else -1
     new_value=current+sign*float(amount)
     if new_value < 0:
         return {"error":"La venta supera el valor actual de la posición."}
-    new_total=total+sign*float(amount)
+
+    internal = funding_mode=="Reasignación interna"
+    cash_after=cash_before
+    if internal:
+        if operation=="Comprar":
+            cash_after=cash_before-float(amount)
+            if cash_after < -1e-9:
+                return {"error":f"La compra requiere {fmt_usd(amount)} pero CASH disponible es {fmt_usd(cash_before)}."}
+        else:
+            cash_after=cash_before+float(amount)
+        new_total=total
+    else:
+        new_total=total+sign*float(amount)
+
     if new_total <= 0:
         return {"error":"El patrimonio resultante no es válido."}
+
     before_weight=current/total if total else 0
     after_weight=new_value/new_total if new_total else 0
 
-    vals=app_df[["Ticker","Valor USD_num"]].dropna().groupby("Ticker",as_index=False)["Valor USD_num"].sum()
-    vals.loc[vals["Ticker"].astype(str)==str(ticker),"Valor USD_num"]=new_value
-    if str(ticker) not in vals["Ticker"].astype(str).tolist() and new_value>0:
+    # Update selected ticker.
+    mask=vals["Ticker"].astype(str)==str(ticker)
+    if mask.any():
+        vals.loc[mask,"Valor USD_num"]=new_value
+    elif new_value>0:
         vals=pd.concat([vals,pd.DataFrame([{"Ticker":ticker,"Valor USD_num":new_value}])],ignore_index=True)
+
+    # Update CASH only for internal reallocation, unless the simulated ticker itself is CASH.
+    if internal and str(ticker)!="CASH":
+        cmask=vals["Ticker"].astype(str)=="CASH"
+        if cmask.any():
+            vals.loc[cmask,"Valor USD_num"]=cash_after
+        elif cash_after>0:
+            vals=pd.concat([vals,pd.DataFrame([{"Ticker":"CASH","Valor USD_num":cash_after}])],ignore_index=True)
+
     vals=vals[vals["Valor USD_num"]>0].sort_values("Valor USD_num",ascending=False)
     top5_before=app_df.groupby("Ticker")["Valor USD_num"].sum().sort_values(ascending=False).head(5).sum()/total if total else 0
     top5_after=vals.head(5)["Valor USD_num"].sum()/new_total if new_total else 0
 
     return {
-        "ticker":ticker,"operation":operation,"amount":float(amount),
+        "ticker":ticker,"operation":operation,"amount":float(amount),"funding_mode":funding_mode,
         "total_before":total,"total_after":new_total,
         "value_before":current,"value_after":new_value,
+        "cash_before":cash_before,"cash_after":cash_after,
         "weight_before":before_weight,"weight_after":after_weight,
         "top5_before":top5_before,"top5_after":top5_after
     }
@@ -383,6 +412,21 @@ if page=="Resumen":
             }
         )
 
+    with st.expander("Control de consistencia"):
+        app_df=data.get("app_feed_v2",pd.DataFrame())
+        look_df=data.get("looker_feed_v2",pd.DataFrame())
+        app_total=float(app_df["Valor USD_num"].sum()) if not app_df.empty and "Valor USD_num" in app_df.columns else 0.0
+        look_total=float(look_df["Valor USD_num"].sum()) if not look_df.empty and "Valor USD_num" in look_df.columns else 0.0
+        diff=look_total-app_total
+        q1,q2,q3=st.columns(3)
+        q1.metric("Total app feed",fmt_usd(app_total))
+        q2.metric("Total detalle",fmt_usd(look_total))
+        q3.metric("Diferencia",fmt_usd(diff))
+        if abs(diff)<=1:
+            st.success("Reconciliación de feeds: OK")
+        else:
+            st.warning("Los feeds no reconcilian exactamente; revisar antes de interpretar diferencias pequeñas como rendimiento.")
+
     st.subheader("Principales posiciones")
     st.caption("Seleccioná una fila para convertir ese activo en el ticker activo.")
     top_positions_table(12)
@@ -424,7 +468,8 @@ elif page=="Diversificación":
     st.caption("Click en una barra para convertir esa exposición en contexto global. El Asesor IA recibe ese mismo contexto.")
     detail=apply_analysis_context(data.get("looker_feed_v2",pd.DataFrame()).copy())
     if not detail.empty and st.session_state.get("analysis_context",{}).get("value"):
-        st.subheader("Posiciones dentro del contexto")
+        st.subheader("Posiciones directas dentro del contexto")
+        st.caption("El gráfico de exposición puede incluir ETF look-through agregado; esta tabla muestra posiciones directas y por eso puede no reconciliar 1:1 con el gráfico.")
         detail_show=detail.sort_values("Valor USD_num",ascending=False)[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num"]].copy()
         detail_show["Peso cartera_num"]=pct_points(detail_show["Peso cartera_num"])
         st.dataframe(
@@ -567,12 +612,25 @@ elif page=="Custodia":
     )
 
 elif page=="Posiciones":
+    mode=st.segmented_control("Vista",["Consolidado","Por cuenta"],default="Consolidado")
     search=st.text_input("Buscar ticker o nombre")
     view=filtered.copy()
     if search:
         q=search.lower().strip()
         view=view[view["Ticker"].astype(str).str.lower().str.contains(q,na=False)|view["Nombre"].astype(str).str.lower().str.contains(q,na=False)]
-    view=view.sort_values("Valor USD_num",ascending=False)
+    if mode=="Consolidado":
+        # One row per ticker. Keep a compact list of accounts instead of duplicated rows.
+        agg=view.groupby("Ticker",as_index=False).agg({
+            "Nombre":"first","Tipo":"first","Valor USD_num":"sum",
+            "Variación_num":"first","Estado dato":"first",
+            "Cuenta":lambda s:", ".join(sorted(set(str(x) for x in s if pd.notna(x))))
+        })
+        total_base=float(data.get("app_feed_v2",pd.DataFrame()).get("Valor USD_num",pd.Series(dtype=float)).sum())
+        agg["Peso cartera_num"]=agg["Valor USD_num"]/total_base if total_base else 0.0
+        view=agg.sort_values("Valor USD_num",ascending=False)
+    else:
+        view=view.sort_values("Valor USD_num",ascending=False)
+
     st.caption(f"{len(view)} filas · {fmt_usd(view['Valor USD_num'].sum())}")
     view_show=view[["Ticker","Nombre","Cuenta","Tipo","Valor USD_num","Peso cartera_num","Variación_num","Estado dato"]].copy()
     view_show["Peso cartera_num"]=pct_points(view_show["Peso cartera_num"])
@@ -624,21 +682,27 @@ elif page=="Simulador":
     tickers=sorted(data.get("app_feed_v2",pd.DataFrame()).get("Ticker",pd.Series(dtype=str)).dropna().astype(str).unique().tolist())
     active=st.session_state.get("active_ticker","")
     idx=tickers.index(active) if active in tickers else 0
-    c1,c2,c3=st.columns([1,1,1])
+    c1,c2,c3,c4=st.columns([1,1,1,1.35])
     ticker=c1.selectbox("Ticker",tickers,index=idx if tickers else 0,key="sim_ticker") if tickers else ""
     operation=c2.selectbox("Operación",["Comprar","Vender"],key="sim_op")
     amount=c3.number_input("Monto USD",min_value=0.0,step=100.0,key="sim_amount")
+    funding_mode=c4.selectbox(
+        "Origen / destino",
+        ["Reasignación interna","Aporte / retiro externo"],
+        help="Reasignación interna usa o genera CASH y mantiene constante el patrimonio total. Aporte/retiro modifica el patrimonio."
+    )
 
     if ticker and amount>0:
-        sim=simulate_trade(ticker,operation,amount)
+        sim=simulate_trade(ticker,operation,amount,funding_mode=funding_mode)
         if sim and sim.get("error"):
             st.error(sim["error"])
         elif sim:
-            a,b,c,d=st.columns(4)
+            a,b,c,d,e=st.columns(5)
             a.metric("Valor posición",fmt_usd(sim["value_after"]),delta=fmt_usd(sim["value_after"]-sim["value_before"]))
             b.metric("Peso posición",fmt_pct(sim["weight_after"]),delta=f'{(sim["weight_after"]-sim["weight_before"])*100:+.2f} pp')
-            c.metric("Patrimonio total",fmt_usd(sim["total_after"]),delta=fmt_usd(sim["total_after"]-sim["total_before"]))
-            d.metric("Top 5",fmt_pct(sim["top5_after"]),delta=f'{(sim["top5_after"]-sim["top5_before"])*100:+.2f} pp')
+            c.metric("CASH",fmt_usd(sim["cash_after"]),delta=fmt_usd(sim["cash_after"]-sim["cash_before"]) if sim["funding_mode"]=="Reasignación interna" else "sin efecto directo")
+            d.metric("Patrimonio total",fmt_usd(sim["total_after"]),delta=fmt_usd(sim["total_after"]-sim["total_before"]))
+            e.metric("Top 5",fmt_pct(sim["top5_after"]),delta=f'{(sim["top5_after"]-sim["top5_before"])*100:+.2f} pp')
 
             st.markdown("#### Antes vs. después")
             simdf=pd.DataFrame([
@@ -652,7 +716,7 @@ elif page=="Simulador":
             if st.button("Pedir lectura al Asesor IA",key="sim_to_ai"):
                 st.session_state["force_page"]="Asesor IA"
                 st.session_state["pending_advisor_prompt"]=(
-                    f"Analizá esta simulación: {operation.lower()} US$ {amount:.0f} de {ticker}. "
+                    f"Analizá esta simulación ({funding_mode}): {operation.lower()} US$ {amount:.0f} de {ticker}. "
                     f"El peso pasa de {fmt_pct(sim['weight_before'])} a {fmt_pct(sim['weight_after'])}; "
                     f"Top 5 pasa de {fmt_pct(sim['top5_before'])} a {fmt_pct(sim['top5_after'])}. "
                     "Quiero riesgos, concentración y contradicciones con la cartera actual."
@@ -662,6 +726,12 @@ elif page=="Simulador":
 elif page=="Asesor IA":
     st.subheader("Asesor IA")
     st.caption("Conversación libre y análisis contextual. Comparador y Simulador también tienen páginas propias.")
+    try:
+        advisor_ready=bool(st.secrets.get("OPENAI_API_KEY",""))
+    except Exception:
+        advisor_ready=False
+    if not advisor_ready:
+        st.warning("El Asesor IA todavía no está activado. El Dashboard y las herramientas determinísticas funcionan normalmente; la IA se habilita agregando OPENAI_API_KEY en Streamlit Secrets.")
     ctx=st.session_state.get("analysis_context",{"dimension":"","value":""})
     if ctx.get("value"):
         st.success(f'Contexto analítico activo: {ctx.get("dimension")} · {ctx.get("value")}')
