@@ -399,6 +399,8 @@ if page=="Resumen":
         st.subheader("Composición por clase")
         df=data["dashboard_diversificacion_v2"].copy()
         df=df[(df["Clase inversión"]!="Total")&df["Clase inversión"].notna()]
+        # En barras horizontales, ordenar ascendente en los datos deja el mayor arriba.
+        df=df.sort_values("Valor USD_num",ascending=True)
         fig=px.bar(df,x="Valor USD_num",y="Clase inversión",orientation="h",hover_data={"Peso_num":":.1%"},labels={"Valor USD_num":"Valor USD","Clase inversión":"Clase"})
         fig.update_layout(height=300,margin=dict(l=10,r=10,t=10,b=10))
         st.plotly_chart(fig,width='stretch')
@@ -497,37 +499,56 @@ elif page=="Diversificación":
         )
 
 
-    st.markdown("### Cripto vs cartera convencional")
     total_port = float(summary["total"]) if pd.notna(summary.get("total")) else 0.0
     crypto_port = float(summary["crypto"]) if pd.notna(summary.get("crypto")) else 0.0
     conventional_port = max(total_port - crypto_port, 0.0)
-    pie_df = pd.DataFrame({
-        "Segmento":["Crypto","Cartera convencional"],
-        "Valor USD":[crypto_port, conventional_port]
-    })
-    pie_df["Peso"] = pie_df["Valor USD"] / pie_df["Valor USD"].sum() if pie_df["Valor USD"].sum() else 0.0
-    fig = px.pie(
-        pie_df,
-        names="Segmento",
-        values="Valor USD",
-        hole=0.52,
-        color="Segmento",
-        color_discrete_map={
-            "Crypto":"#5d1f35",
-            "Cartera convencional":"#5b8ecb"
-        },
-    )
-    fig.update_traces(
-        textposition="inside",
-        texttemplate="%{label}<br>US$ %{value:,.0f}<br>%{percent}",
-        hovertemplate="<b>%{label}</b><br>Valor: US$ %{value:,.0f}<br>Peso: %{percent}<extra></extra>"
-    )
-    fig.update_layout(
-        height=380,
-        margin=dict(l=10,r=10,t=10,b=10),
-        legend_title_text="",
-    )
-    st.plotly_chart(fig,width='stretch')
+
+    app_positions=data.get("app_feed_v2",pd.DataFrame()).copy()
+    if not app_positions.empty and "Tipo" in app_positions.columns and "Valor USD_num" in app_positions.columns:
+        etf_port=float(app_positions.loc[
+            app_positions["Tipo"].astype(str).str.upper().eq("ETF"),
+            "Valor USD_num"
+        ].sum())
+    else:
+        etf_port=0.0
+    non_etf_port=max(total_port-etf_port,0.0)
+
+    d1,d2=st.columns(2)
+    with d1:
+        st.markdown("### Cripto vs cartera convencional")
+        pie_df = pd.DataFrame({
+            "Segmento":["Crypto","Cartera convencional"],
+            "Valor USD":[crypto_port, conventional_port]
+        })
+        fig = px.pie(
+            pie_df,names="Segmento",values="Valor USD",hole=0.52,color="Segmento",
+            color_discrete_map={"Crypto":"#5d1f35","Cartera convencional":"#5b8ecb"},
+        )
+        fig.update_traces(
+            textposition="inside",
+            texttemplate="%{label}<br>US$ %{value:,.0f}<br>%{percent}",
+            hovertemplate="<b>%{label}</b><br>Valor: US$ %{value:,.0f}<br>Peso: %{percent}<extra></extra>"
+        )
+        fig.update_layout(height=380,margin=dict(l=10,r=10,t=10,b=10),legend_title_text="")
+        st.plotly_chart(fig,width='stretch')
+
+    with d2:
+        st.markdown("### ETF vs resto de cartera")
+        etf_df=pd.DataFrame({
+            "Segmento":["ETF","Resto de cartera"],
+            "Valor USD":[etf_port,non_etf_port]
+        })
+        fig_etf=px.pie(
+            etf_df,names="Segmento",values="Valor USD",hole=0.52,color="Segmento",
+            color_discrete_map={"ETF":"#4f8fc7","Resto de cartera":"#9aa6b2"},
+        )
+        fig_etf.update_traces(
+            textposition="inside",
+            texttemplate="%{label}<br>US$ %{value:,.0f}<br>%{percent}",
+            hovertemplate="<b>%{label}</b><br>Valor: US$ %{value:,.0f}<br>Peso: %{percent}<extra></extra>"
+        )
+        fig_etf.update_layout(height=380,margin=dict(l=10,r=10,t=10,b=10),legend_title_text="")
+        st.plotly_chart(fig_etf,width='stretch')
 
 elif page=="Evolución":
     evo=data["dashboard_evolucion_v2"].copy()
@@ -557,7 +578,8 @@ elif page=="Riesgo":
             if impact_usd_col=="Impacto USD":
                 stress["_impact_usd"]=stress[impact_usd_col].map(local_num)
                 impact_usd_col="_impact_usd"
-            stress=stress.sort_values(impact_usd_col,ascending=True)
+            stress["_impact_order"]=pd.to_numeric(stress[impact_usd_col],errors="coerce").abs()
+            stress=stress.sort_values("_impact_order",ascending=True)
             fig=px.bar(
                 stress,x=impact_usd_col,y="Métrica",orientation="h",
                 labels={impact_usd_col:"Impacto USD"},
@@ -570,7 +592,8 @@ elif page=="Riesgo":
                 tmp["_impact_pct"]=tmp[impact_pct_col].map(local_num)
             else:
                 tmp["_impact_pct"]=pd.to_numeric(tmp[impact_pct_col],errors="coerce")*100
-            tmp=tmp.sort_values("_impact_pct",ascending=True)
+            tmp["_impact_order"]=pd.to_numeric(tmp["_impact_pct"],errors="coerce").abs()
+            tmp=tmp.sort_values("_impact_order",ascending=True)
             fig=px.bar(
                 tmp,x="_impact_pct",y="Métrica",orientation="h",
                 labels={"_impact_pct":"Impacto cartera (%)"},
@@ -611,8 +634,9 @@ elif page=="Custodia":
         c.metric("Cuentas",int(s["Cantidad cuentas_num"]))
         rows=detail[detail["Custodio"]==cust].copy().sort_values("Valor USD_num",ascending=False)
 
+    chart_rows=rows.head(15).sort_values("Valor USD_num",ascending=True)
     fig=px.bar(
-        rows.head(15),x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
+        chart_rows,x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
         labels={"Valor USD_num":"Valor USD"}
     )
     st.plotly_chart(fig,width='stretch')

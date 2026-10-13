@@ -1,4 +1,4 @@
-# PMS Max · Cockpit v0.24
+# PMS Max · Cockpit v0.25
 
 Esta es la instancia privada de **PMS Max**.
 
@@ -44,7 +44,7 @@ Incluye consulta libre y acciones guiadas:
 
 El dashboard funciona sin API key. El asesor requiere `OPENAI_API_KEY`.
 
-## v0.24 — Capas explícitas
+## v0.25 — Capas explícitas
 PMS Max Cockpit queda dividido conceptualmente en:
 
 1. Dashboard
@@ -76,30 +76,30 @@ El Simulador calcula de manera determinística el impacto de comprar/vender un m
 Luego permite enviar ese escenario al Asesor IA para interpretación.
 
 
-## v0.24
+## v0.25
 Dashboard reforzado, contexto compartido, detalle de exposición, concentración por posición y proyecto listo para deploy en Streamlit Cloud.
 
 
-## v0.24
+## v0.25
 Fix de arranque en Streamlit: `apply_analysis_context()` ahora se define antes de su primer uso.
 
-## v0.24
+## v0.25
 - Fix de columnas normalizadas `Variación_num` e `Impacto cartera_num`.
 - Corrige el KeyError que frenaba Resumen en Mayores movimientos.
 - Evita mostrar `Precios: nan` cuando el estado no está disponible.
 
-## v0.24
+## v0.25
 - Formato numérico homogéneo en español.
 - Valores USD con separador de miles.
 - Porcentajes visibles como porcentaje, no como fracción decimal.
 - Encabezados de tablas y ejes sin sufijos técnicos `_num`.
 - Ajuste visual de tarjetas KPI para evitar cortes de línea.
 
-## v0.24
+## v0.25
 - Corrección de porcentajes en tablas: Peso y Variación ahora se muestran en puntos porcentuales reales.
 - Formato consistente en Resumen, Evolución, Posiciones, Diversificación y Custodia.
 
-## v0.24
+## v0.25
 - Patrimonio total como KPI principal a la izquierda.
 - Crypto y Patrimonio sin Crypto agrupados en una misma tarjeta secundaria.
 - Composición por clase más angosta; Mayores movimientos más ancho.
@@ -107,39 +107,39 @@ Fix de arranque en Streamlit: `apply_analysis_context()` ahora se define antes d
 - Nombres largos compactados en Mayores movimientos y Principales posiciones.
 - Columnas de Estado más angostas y tipografía de tablas más compacta.
 
-## v0.24
+## v0.25
 - Se elimina la tarjeta frontal de “Desglose”.
 - El Resumen prioriza Patrimonio total, Argentina, Top 5 y Posiciones.
 - Se agrega en Diversificación un gráfico de torta/donut “Cripto vs cartera convencional”.
 - Colores del donut: Crypto en bordeaux oscuro y cartera convencional en azul/celeste.
 
-## v0.24
+## v0.25
 - Custodia inicia en TODOS y conserva selección individual por custodio.
 - Diversificación ordenada de mayor a menor, con dos tonos de azul diferenciados.
 - Posiciones simplificada: se ocultan Custodio, Clase, Región y Sector.
 - Fix robusto del stress test en Riesgo ante variaciones del nombre de columna de impacto.
 - Se crea PRODUCT_BACKLOG.md y Evolución queda explícitamente pendiente de rediseño.
 
-## v0.24
+## v0.25
 - En Diversificación, los títulos `Región` y `Sector` pasan arriba de cada gráfico.
 - Se eliminan los títulos verticales laterales de los ejes Y.
 - `Región`, `Sector` y `Cripto vs cartera convencional` usan la misma jerarquía tipográfica.
 
-## v0.24
+## v0.25
 - Simulador corregido conceptualmente: distingue reasignación interna (usa/genera CASH y no cambia patrimonio) de aporte/retiro externo.
 - Posiciones agrega vista Consolidado / Por cuenta.
 - El Asesor IA muestra claramente si falta API key.
 - Diversificación aclara la diferencia entre exposición ETF look-through y posiciones directas.
 - Resumen incorpora un control de reconciliación de feeds dentro de un expander.
 
-## v0.24
+## v0.25
 - Blindaje contra lecturas transitorias/incompletas del bloque HOME.
 - El estado actual del patrimonio se reconcilia contra app_feed_v2.
 - Si HOME y detalle difieren materialmente, el Dashboard usa el detalle consolidado y oculta deltas engañosos.
 - Argentina usa dashboard_exposicion_v2 para mantener ETF look-through.
 - Control de consistencia muestra HOME, app feed y detalle por cuenta.
 
-## v0.24
+## v0.25
 - Asesor IA preparado para activación real.
 - Modelo por defecto actualizado a `gpt-5.6`.
 - Responses API con web search y razonamiento low/medium según tarea.
@@ -148,33 +148,38 @@ Fix de arranque en Streamlit: `apply_analysis_context()` ahora se define antes d
 - El prompt exige separar datos internos PMS de datos externos y mantener visibles las fuentes.
 
 
-## v0.24
+## v0.25
 - Compatibilidad Streamlit: `use_container_width` reemplazado por `width`.
 - El Asesor IA maneja autenticación, saldo, rate limits y conexión sin mostrar traceback rojo.
 - El Comparador recibe manejo de errores equivalente.
 - Fix del contexto de `compare_companies_structured` (variable `selected_ticker` no definida).
 
-## v0.24
+## v0.25
 - El Asesor detecta tickers mencionados en lenguaje natural y adjunta su detalle completo por cuenta desde `looker_feed_v2`.
 - Evita falsos positivos de reconciliación provocados por contextos filtrados/truncados.
 - Respuestas del chat pasan a modo ejecutivo por defecto (600–1000 palabras aprox.), con profundidad bajo pedido.
 - Se refuerza la distinción entre dato faltante en contexto e inconsistencia real del PMS.
 
-## v0.24
+## v0.25
 - Formato del Asesor en dos niveles: resumen ejecutivo de 5–7 bullets + desarrollo.
 - Objetivo de 700–900 palabras y tope de 1.000 salvo pedido explícito de profundidad.
 - Se eliminan reconciliaciones automáticas entre feeds con distinto alcance.
 - El Asesor sólo puede llamar “inconsistencia” a una alerta de calidad explícitamente verificada por el PMS.
 - El detalle filtrado se etiqueta internamente como parcial y no apto para reconciliación.
 
-## v0.24
+## v0.25
 - Ajuste de extensión del Asesor: 600–750 palabras por defecto.
 - Cuando el usuario pide profundidad, puede ampliar hasta aproximadamente 1.200 palabras.
 - Se mantiene el formato en dos niveles: resumen ejecutivo + desarrollo + conclusión.
 
-## v0.24
+## v0.25
 - Reconstruida directamente sobre la v0.22 estable.
 - Único cambio funcional: longitud/formato del Asesor.
 - Respuesta normal: 350–500 palabras.
 - Profundidad explícita: 900–1.200 palabras.
 - No se modificó la lógica de carga, datos, navegación ni controles.
+
+## v0.25
+- Diversificación: nuevo cuadro `ETF vs resto de cartera` junto a `Cripto vs cartera convencional`.
+- Barras de composición, región, sector, riesgo y custodia ordenadas visualmente de mayor a menor.
+- Regla adoptada para futuras instancias PMS: toda barra categórica comparable debe mostrar mayor arriba/primero.
