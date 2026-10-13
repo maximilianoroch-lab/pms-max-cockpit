@@ -183,3 +183,8 @@ Fix de arranque en Streamlit: `apply_analysis_context()` ahora se define antes d
 - Diversificación: nuevo cuadro `ETF vs resto de cartera` junto a `Cripto vs cartera convencional`.
 - Barras de composición, región, sector, riesgo y custodia ordenadas visualmente de mayor a menor.
 - Regla adoptada para futuras instancias PMS: toda barra categórica comparable debe mostrar mayor arriba/primero.
+
+## v0.26
+- En Diversificación, el cuadro de ETFs pasa de donut a barras/progreso tipo `ETFs principales`.
+- ETFs ordenados de mayor a menor por valor.
+- GLD se incluye como ETF por vehículo, aunque permanece Oro en la composición principal.

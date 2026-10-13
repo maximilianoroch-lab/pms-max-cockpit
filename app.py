@@ -533,22 +533,45 @@ elif page=="Diversificación":
         st.plotly_chart(fig,width='stretch')
 
     with d2:
-        st.markdown("### ETF vs resto de cartera")
-        etf_df=pd.DataFrame({
-            "Segmento":["ETF","Resto de cartera"],
-            "Valor USD":[etf_port,non_etf_port]
-        })
-        fig_etf=px.pie(
-            etf_df,names="Segmento",values="Valor USD",hole=0.52,color="Segmento",
-            color_discrete_map={"ETF":"#4f8fc7","Resto de cartera":"#9aa6b2"},
-        )
-        fig_etf.update_traces(
-            textposition="inside",
-            texttemplate="%{label}<br>US$ %{value:,.0f}<br>%{percent}",
-            hovertemplate="<b>%{label}</b><br>Valor: US$ %{value:,.0f}<br>Peso: %{percent}<extra></extra>"
-        )
-        fig_etf.update_layout(height=380,margin=dict(l=10,r=10,t=10,b=10),legend_title_text="")
-        st.plotly_chart(fig_etf,width='stretch')
+        st.markdown("### ETFs principales")
+        st.caption("Detalle técnico de ETFs; GLD permanece Oro en la composición principal.")
+
+        etf_rows = app_positions.loc[
+            app_positions["Tipo"].astype(str).str.upper().eq("ETF")
+        ].copy() if not app_positions.empty and "Tipo" in app_positions.columns else pd.DataFrame()
+
+        if not etf_rows.empty:
+            keep_cols=[c for c in ["Ticker","Valor USD_num","Peso cartera_num","Variación_num"] if c in etf_rows.columns]
+            etf_rows=etf_rows[keep_cols].copy()
+            if "Peso cartera_num" not in etf_rows.columns:
+                etf_rows["Peso cartera_num"]=etf_rows["Valor USD_num"]/total_port if total_port else 0.0
+
+            agg={"Valor USD_num":"sum","Peso cartera_num":"sum"}
+            if "Variación_num" in etf_rows.columns:
+                agg["Variación_num"]="mean"
+
+            etf_rows=etf_rows.groupby("Ticker",as_index=False).agg(agg)
+            etf_rows=etf_rows.sort_values("Valor USD_num",ascending=False).head(8)
+
+            max_etf=float(etf_rows["Valor USD_num"].max()) if not etf_rows.empty else 1.0
+            for _,r in etf_rows.iterrows():
+                ticker=str(r["Ticker"])
+                value=float(r["Valor USD_num"])
+                weight=float(r["Peso cartera_num"])
+                chg=float(r["Variación_num"]) if "Variación_num" in etf_rows.columns and pd.notna(r["Variación_num"]) else None
+
+                c_t,c_v,c_c=st.columns([1.0,2.1,1.05])
+                with c_t:
+                    st.markdown(f"**{ticker}**")
+                with c_v:
+                    st.markdown(f"**{weight:.1%} · US$ {value:,.0f}**")
+                with c_c:
+                    if chg is not None:
+                        arrow="▲" if chg>=0 else "▼"
+                        st.markdown(f"**{arrow} {chg:+.1%}**")
+                st.progress(min(max(value/max_etf,0.0),1.0))
+        else:
+            st.caption("No hay ETFs directos para mostrar.")
 
 elif page=="Evolución":
     evo=data["dashboard_evolucion_v2"].copy()
