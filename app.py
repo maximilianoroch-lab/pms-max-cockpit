@@ -72,25 +72,16 @@ with st.sidebar:
     if st.session_state.get("force_page")=="Asesor IA":
         page="Asesor IA"
     st.divider()
+    # El ticker activo es contexto para el Asesor, no un filtro de actualización.
     filtered=positions.copy()
     if not positions.empty:
         all_tickers=sorted(positions["Ticker"].dropna().astype(str).unique().tolist())
         active_default=st.session_state.get("active_ticker","")
         ticker_options=["—"]+all_tickers
         ticker_index=ticker_options.index(active_default) if active_default in ticker_options else 0
-        selected_ticker=st.selectbox("Ticker activo",ticker_options,index=ticker_index,help="Este ticker se comparte con el Asesor IA y otras vistas.")
+        selected_ticker=st.selectbox("Ticker activo (Asesor IA)",ticker_options,index=ticker_index,
+            help="El ticker seleccionado se comparte con el Asesor IA. No limita los datos que se actualizan.")
         st.session_state["active_ticker"]="" if selected_ticker=="—" else selected_ticker
-
-        custodios=["Todos"]+sorted(positions["Custodio"].dropna().astype(str).unique().tolist())
-        tipos=["Todos"]+sorted(positions["Tipo"].dropna().astype(str).unique().tolist())
-        regiones=["Todas"]+sorted(positions["Región directa"].dropna().astype(str).unique().tolist())
-        sel_cust=st.selectbox("Custodio",custodios)
-        sel_tipo=st.selectbox("Tipo",tipos)
-        sel_region=st.selectbox("Región",regiones)
-        if sel_cust!="Todos": filtered=filtered[filtered["Custodio"]==sel_cust]
-        if sel_tipo!="Todos": filtered=filtered[filtered["Tipo"]==sel_tipo]
-        if sel_region!="Todas": filtered=filtered[filtered["Región directa"]==sel_region]
-        filtered=apply_analysis_context(filtered)
     else:
         st.session_state["active_ticker"]=""
     ctx=st.session_state.get("analysis_context",{"dimension":"","value":""})
@@ -100,7 +91,8 @@ with st.sidebar:
             st.session_state["analysis_context"]={"dimension":"","value":""}
             st.rerun()
 
-    if st.button("Actualizar datos",width='stretch'):
+    st.caption("La actualización recarga todas las fuentes y todas las posiciones.")
+    if st.button("Actualizar toda la cartera",width='stretch'):
         st.cache_data.clear(); st.rerun()
     st.caption(f'Fuente: {PORTFOLIO["display_name"]} · {summary.get("last_market","—")}')
     try: has_key=bool(st.secrets.get("OPENAI_API_KEY",""))
@@ -138,6 +130,19 @@ def pct_points(series):
         return pd.to_numeric(series,errors="coerce")*100
     except:
         return series
+
+def colored_variation(df, column="Variación_num"):
+    """Resalta variaciones con colores, conservando números para ordenar/seleccionar."""
+    if column not in df.columns:
+        return df
+    def color(v):
+        try:
+            x=float(v)
+            if pd.isna(x):return ""
+            return "color: #43d59c; font-weight: 700" if x>0 else ("color: #ff7070; font-weight: 700" if x<0 else "color: #9aacc0")
+        except (TypeError,ValueError):
+            return ""
+    return df.style.map(color,subset=[column])
 
 def local_num(v):
     s=str(v).replace("$","").replace("%","").strip()
@@ -239,7 +244,7 @@ def top_positions_table(limit=12):
     top_show["Peso_num"]=pct_points(top_show["Peso_num"])
     top_show["Variación_num"]=pct_points(top_show["Variación_num"])
     ev=st.dataframe(
-        top_show,
+        colored_variation(top_show),
         hide_index=True,width='stretch',on_select="rerun",selection_mode="single-row",key=f"top_positions_{limit}",
         column_config={
             "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
@@ -264,7 +269,9 @@ def render_active_context():
     c1.metric(snap["Ticker"],snap["Nombre"])
     c2.metric("Valor en cartera",fmt_usd(snap["Valor USD"]))
     c3.metric("Peso",fmt_pct(snap["Peso"]))
-    c4.metric("Variación",fmt_pct(snap["Variación"]))
+    c4.metric("Variación",fmt_pct(snap["Variación"]),delta=None)
+    # El valor destacado cambia de color según su signo mediante HTML.
+    st.markdown(f'<div class="{("up" if snap["Variación"]>0 else "down" if snap["Variación"]<0 else "flat")}">{change_html(snap["Variación"])}</div>',unsafe_allow_html=True)
     st.caption(f'{snap["Clase"]} · {snap["Tipo"]} · {snap["Región"]} · {snap["Sector"]} · Custodio(s): {snap["Custodios"] or "—"} · Cuenta(s): {snap["Cuentas"] or "—"}')
 
 
@@ -416,7 +423,7 @@ if page=="Resumen":
         m_show["Peso_num"]=pct_points(m_show["Peso_num"])
         m_show["Variación_num"]=pct_points(m_show["Variación_num"])
         st.dataframe(
-            m_show,
+            colored_variation(m_show),
             hide_index=True,width='stretch',
             column_config={
                 "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
@@ -568,7 +575,8 @@ elif page=="Diversificación":
                 with c_c:
                     if chg is not None:
                         arrow="▲" if chg>=0 else "▼"
-                        st.markdown(f"**{arrow} {chg:+.1%}**")
+                        etf_color="#43d59c" if chg>0 else ("#ff7070" if chg<0 else "#9aacc0")
+                        st.markdown(f'<span style="color:{etf_color};font-weight:700">{arrow} {chg:+.1%}</span>',unsafe_allow_html=True)
                 st.progress(min(max(value/max_etf,0.0),1.0))
         else:
             st.caption("No hay ETFs directos para mostrar.")
@@ -583,7 +591,17 @@ elif page=="Evolución":
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
     top["Cotización"]=top.apply(quote_text,axis=1)
-    st.dataframe(top[["Ticker","Nombre","Valor USD_num","Peso_num","Cotización","Variación_num","Estado dato"]],hide_index=True,width='stretch')
+    evo_show=top[["Ticker","Nombre","Valor USD_num","Peso_num","Cotización","Variación_num","Estado dato"]].copy()
+    evo_show["Peso_num"]=pct_points(evo_show["Peso_num"])
+    evo_show["Variación_num"]=pct_points(evo_show["Variación_num"])
+    st.dataframe(
+        colored_variation(evo_show),hide_index=True,width='stretch',
+        column_config={
+            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
+            "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
+        }
+    )
 
 elif page=="Riesgo":
     render_global_context_banner()
@@ -674,6 +692,19 @@ elif page=="Custodia":
     )
 
 elif page=="Posiciones":
+    st.caption("Filtros exclusivos de esta tabla. No modifican el patrimonio general ni la actualización.")
+    f1,f2,f3=st.columns(3)
+    with f1:
+        sel_cust=st.selectbox("Custodio",["Todos"]+sorted(positions["Custodio"].dropna().astype(str).unique().tolist()),key="pos_custodio")
+    with f2:
+        sel_tipo=st.selectbox("Tipo",["Todos"]+sorted(positions["Tipo"].dropna().astype(str).unique().tolist()),key="pos_tipo")
+    with f3:
+        sel_region=st.selectbox("Región",["Todas"]+sorted(positions["Región directa"].dropna().astype(str).unique().tolist()),key="pos_region")
+    filtered=positions.copy()
+    if sel_cust!="Todos": filtered=filtered[filtered["Custodio"]==sel_cust]
+    if sel_tipo!="Todos": filtered=filtered[filtered["Tipo"]==sel_tipo]
+    if sel_region!="Todas": filtered=filtered[filtered["Región directa"]==sel_region]
+    filtered=apply_analysis_context(filtered)
     mode=st.segmented_control("Vista",["Consolidado","Por cuenta"],default="Consolidado")
     search=st.text_input("Buscar ticker o nombre")
     view=filtered.copy()
@@ -698,7 +729,7 @@ elif page=="Posiciones":
     view_show["Peso cartera_num"]=pct_points(view_show["Peso cartera_num"])
     view_show["Variación_num"]=pct_points(view_show["Variación_num"])
     pos_event=st.dataframe(
-        view_show,
+        colored_variation(view_show),
         hide_index=True,width='stretch',height=700,
         on_select="rerun",selection_mode="single-row",key="positions_table",
         column_config={

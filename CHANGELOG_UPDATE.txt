@@ -1,0 +1,1 @@
+Variaciones: verde positivo, rojo negativo en tablas principales (Resumen, Posiciones, Evolución), tarjetas y ETFs. Evolución: peso y variación con %. Filtros Custodio/Tipo/Región pasan a Posiciones; Ticker activo permanece como contexto IA. Actualizar toda la cartera no depende de filtros.
