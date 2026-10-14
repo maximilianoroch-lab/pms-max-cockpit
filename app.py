@@ -947,9 +947,10 @@ elif page=="Simulador":
                 rows.append(("Patrimonio",sim["total_before"],sim["total_after"],"USD"))
                 table=pd.DataFrame([{"Concepto":label,"Antes":before,"Después":after,"Cambio":after-before}
                                     for label,before,after,unit in rows])
-                st.dataframe(table,hide_index=True,width='stretch',
-                    column_config={k:st.column_config.NumberColumn(k,format="US$ %.2f")
-                                   for k in ("Antes","Después","Cambio")})
+                # Importes enteros con separador de miles argentino; sin decimales.
+                for column in ("Antes", "Después", "Cambio"):
+                    table[column] = table[column].map(fmt_usd)
+                st.dataframe(table, hide_index=True, width="stretch")
                 x,y=st.columns(2)
                 x.metric("Peso del activo · antes → después",
                     f"{fmt_pct(sim['weight_before'])} → {fmt_pct(sim['weight_after'])}")
