@@ -193,7 +193,7 @@ Para crecimientos usá CAGR calculada con cifras históricas, no estimaciones si
 Usá búsqueda web y fuentes primarias cuando sea posible; indicá fechas y limitaciones de comparabilidad.
 En bullets escribí 4 a 6 puntos breves y contrastantes, con ventajas/desventajas EXPLÍCITAS por ticker; evitá un empate vago.
 En analysis escribí un desarrollo de extensión moderada (aprox 350 a 550 palabras), con riesgos, fortalezas, contexto PMS, balance y conclusión condicionada. No repitas todos los bullets.
-«Favorece» de cada fila es orientación por métrica, no decisión global.
+«Favorece» de cada fila es orientación por métrica, no decisión global. Para indicadores bancarios usá las denominaciones estándar y marcá comparable:false si los períodos o definiciones impiden una comparación justa. Explicá en cada fila las métricas no estándar con description breve. No confundas cobertura de mora con garantías.
 Contexto PMS: {json.dumps(ctx,ensure_ascii=False,default=str)}
 Respondé SOLO JSON válido, sin markdown externo, con esta forma:
 {{"company_a":"{ticker1.upper()}","company_b":"{ticker2.upper()}",

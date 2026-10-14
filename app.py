@@ -357,6 +357,39 @@ COMPARISON_HELP={
 LOWER_BETTER={"P/E","Forward P/E","PEG","EV/EBITDA","Morosidad","Ratio eficiencia"}
 HIGHER_BETTER={"ROE","ROA","ROIC","Crecimiento ingresos 3-5a","Crecimiento EPS 3-5a",
                "Free Cash Flow","NIM","Cobertura mora","Capital regulatorio"}
+
+# Claves estables para que variaciones del nombre que devuelve la IA no alteren «Favorece».
+def comparison_metric_key(name):
+    import unicodedata, re
+    text=unicodedata.normalize('NFKD',str(name)).encode('ascii','ignore').decode().lower()
+    text=re.sub(r'\s+',' ',text).strip()
+    if 'forward' in text and ('p/e' in text or 'pe ' in text): return 'Forward P/E'
+    if 'peg' in text: return 'PEG'
+    if 'ev/ebitda' in text or 'ev / ebitda' in text: return 'EV/EBITDA'
+    if 'roic' in text: return 'ROIC'
+    if 'roe' in text or 'return on equity' in text: return 'ROE'
+    if 'roa' in text or 'return on assets' in text: return 'ROA'
+    if 'p/e' in text or text=='pe': return 'P/E'
+    if 'tier' in text or 'cet1' in text or 'capital regulatorio' in text: return 'Capital regulatorio'
+    if 'cobertura' in text and ('mora' in text or 'cartera' in text): return 'Cobertura mora'
+    if 'morosidad' in text or 'cartera irregular' in text or 'npl' in text: return 'Morosidad'
+    if 'eficiencia' in text or 'cost-to-income' in text: return 'Ratio eficiencia'
+    if 'nim' in text or 'margen financiero' in text or 'margen neto de intereses' in text: return 'NIM'
+    if 'crecimiento' in text and ('eps' in text or 'utilidad por accion' in text or 'beneficio por accion' in text): return 'Crecimiento EPS 3-5a'
+    if 'crecimiento' in text and ('venta' in text or 'ingres' in text): return 'Crecimiento ingresos 3-5a'
+    if 'free cash flow' in text or 'flujo de caja libre' in text or text=='fcf': return 'Free Cash Flow'
+    return None
+
+COMPARISON_HELP.update({
+    'ROE':'Rentabilidad del banco sobre el patrimonio de los accionistas; verificar si está anualizado.',
+    'ROA':'Rentabilidad sobre los activos del banco; verificar si está anualizado.',
+    'NIM':'Margen neto de intereses: ingreso financiero neto respecto de activos remunerados; las metodologías pueden variar.',
+    'Morosidad':'Porcentaje de préstamos con atrasos o incumplimientos; cuanto menor, mejor, si las definiciones coinciden.',
+    'Cobertura mora':'Provisiones constituidas frente a créditos en mora; no equivale a garantías reales.',
+    'Ratio eficiencia':'Gastos operativos sobre ingresos; menor suele ser mejor si las bases son equivalentes.',
+    'Capital regulatorio':'Tier 1 es capital regulatorio de alta calidad; CET1 es su componente de capital ordinario de máxima calidad. No confundir ambos ratios.',
+})
+
 def render_company_comparison(result):
     if not result:return
     a=result.get("company_a","Empresa A"); b=result.get("company_b","Empresa B")
@@ -371,13 +404,17 @@ def render_company_comparison(result):
         except (TypeError,ValueError): vb=None
         # Omitir métricas que no aplican a este tipo de empresa.
         if va is None and vb is None:continue
+        key=comparison_metric_key(name)
         winner="Sin ventaja clara"
-        if va is not None and vb is not None:
+        comparable=m.get("comparable",True) is not False
+        if not comparable:
+            winner="No comparable"
+        elif va is not None and vb is not None and key:
             denom=max(abs(va),abs(vb),1e-9)
             if abs(va-vb)/denom>=0.01:
-                if name in LOWER_BETTER and va>0 and vb>0:
+                if key in LOWER_BETTER and va>0 and vb>0:
                     winner=a if va<vb else b
-                elif name in HIGHER_BETTER:
+                elif key in HIGHER_BETTER:
                     winner=a if va>vb else b
         unit=m.get("unit","")
         def fmt(v):
@@ -386,7 +423,9 @@ def render_company_comparison(result):
             if unit=="USD":return f"US$ {v:,.0f}"
             if unit=="x" or name in {"P/E","Forward P/E","PEG","EV/EBITDA"}:return f"{v:,.2f}x"
             return f"{v:,.2f}"
-        desc=COMPARISON_HELP.get(name,m.get("description",""))
+        desc=COMPARISON_HELP.get(key) if key else None
+        if not desc:
+            desc=m.get("description") or "Indicador adicional: interpretar según su definición y comparabilidad."
         rows.append({"Indicador":name,"Descripción":desc,a:fmt(va),b:fmt(vb),"Favorece":winner})
     st.subheader(f"Comparación de fundamentales · {a} vs {b}")
     if rows:
