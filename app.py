@@ -19,6 +19,8 @@ st.markdown("""
 .metric-value{color:#f4f7fb;font-size:24px;font-weight:900;margin-top:6px;white-space:nowrap}
 .metric-sub{color:#93a7bd;font-size:11px;margin-top:6px}
 .up{color:#54d49a;font-weight:800}.down{color:#ff7a7a;font-weight:800}.flat{color:#93a7bd;font-weight:800}
+.st-key-simulator_metrics [data-testid="stMetricValue"] {font-size:clamp(1.35rem,2vw,1.9rem);white-space:normal;overflow-wrap:anywhere;}
+.st-key-simulator_metrics [data-testid="stMetricDelta"] {font-size:.92rem;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -275,66 +277,68 @@ def render_active_context():
     st.caption(f'{snap["Clase"]} · {snap["Tipo"]} · {snap["Región"]} · {snap["Sector"]} · Custodio(s): {snap["Custodios"] or "—"} · Cuenta(s): {snap["Cuentas"] or "—"}')
 
 
-def simulate_trade(ticker, operation, amount, funding_mode="Reasignación interna"):
+def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker=None, cash_amount=0.0):
     app_df=data.get("app_feed_v2",pd.DataFrame()).copy()
     if app_df.empty:
         return None
-
-    vals=app_df[["Ticker","Valor USD_num"]].dropna().groupby("Ticker",as_index=False)["Valor USD_num"].sum()
-    total=float(vals["Valor USD_num"].sum())
-    current=float(vals.loc[vals["Ticker"].astype(str)==str(ticker),"Valor USD_num"].sum())
-    cash_before=float(vals.loc[vals["Ticker"].astype(str)=="CASH","Valor USD_num"].sum())
-
-    sign=1 if operation=="Comprar" else -1
-    new_value=current+sign*float(amount)
-    if new_value < 0:
-        return {"error":"La venta supera el valor actual de la posición."}
-
-    internal = funding_mode=="Reasignación interna"
-    cash_after=cash_before
-    if internal:
-        if operation=="Comprar":
-            cash_after=cash_before-float(amount)
-            if cash_after < -1e-9:
-                return {"error":f"La compra requiere {fmt_usd(amount)} pero CASH disponible es {fmt_usd(cash_before)}."}
+    vals=app_df.groupby("Ticker",as_index=False)["Valor USD_num"].sum()
+    holdings=dict(zip(vals["Ticker"].astype(str), vals["Valor USD_num"].astype(float)))
+    total=sum(holdings.values())
+    ticker=str(ticker)
+    current=holdings.get(ticker,0.0)
+    cash_before=holdings.get("CASH",0.0)
+    amount=float(amount)
+    if amount<=0:
+        return {"error":"El monto debe ser positivo."}
+    if ticker=="CASH":
+        return {"error":"CASH es el origen o destino de los fondos; elegí otro activo para operar."}
+    if operation=="Vender" and amount>current+0.005:
+        return {"error":f"Venta de {fmt_usd(amount)} supera la posición disponible de {fmt_usd(current)}."}
+    before=holdings.copy()
+    source_before=holdings.get(str(source_ticker),0.0) if source_ticker else 0.0
+    if operation=="Comprar":
+        if funding_mode=="CASH":
+            cash_used=amount
+        elif funding_mode=="Venta de otro activo":
+            cash_used=0.0
+        elif funding_mode=="CASH + venta de activo":
+            cash_used=float(cash_amount)
+            if cash_used < 0 or cash_used > amount:
+                return {"error":"El importe financiado con CASH debe estar entre cero y el monto total."}
         else:
-            cash_after=cash_before+float(amount)
-        new_total=total
+            cash_used=0.0
+        sale_used=amount-cash_used if funding_mode in ("Venta de otro activo","CASH + venta de activo") else 0.0
+        if cash_used>cash_before+0.005:
+            return {"error":f"CASH insuficiente: requiere {fmt_usd(cash_used)} y hay {fmt_usd(cash_before)}."}
+        if sale_used:
+            if not source_ticker or source_ticker in (ticker,"CASH"):
+                return {"error":"Seleccioná otro activo válido para financiar la compra."}
+            if sale_used>source_before+0.005:
+                return {"error":f"No se pueden vender {fmt_usd(sale_used)} de {source_ticker}: disponible {fmt_usd(source_before)}."}
+            holdings[source_ticker]-=sale_used
+        holdings["CASH"]=cash_before-cash_used
+        holdings[ticker]=current+amount
+        new_total=total+(amount if funding_mode=="Aporte externo" else 0.0)
     else:
-        new_total=total+sign*float(amount)
-
-    if new_total <= 0:
+        holdings[ticker]=current-amount
+        if funding_mode=="Retiro externo":
+            new_total=total-amount
+        else:
+            holdings["CASH"]=cash_before+amount
+            new_total=total
+    if new_total<=0:
         return {"error":"El patrimonio resultante no es válido."}
-
-    before_weight=current/total if total else 0
-    after_weight=new_value/new_total if new_total else 0
-
-    # Update selected ticker.
-    mask=vals["Ticker"].astype(str)==str(ticker)
-    if mask.any():
-        vals.loc[mask,"Valor USD_num"]=new_value
-    elif new_value>0:
-        vals=pd.concat([vals,pd.DataFrame([{"Ticker":ticker,"Valor USD_num":new_value}])],ignore_index=True)
-
-    # Update CASH only for internal reallocation, unless the simulated ticker itself is CASH.
-    if internal and str(ticker)!="CASH":
-        cmask=vals["Ticker"].astype(str)=="CASH"
-        if cmask.any():
-            vals.loc[cmask,"Valor USD_num"]=cash_after
-        elif cash_after>0:
-            vals=pd.concat([vals,pd.DataFrame([{"Ticker":"CASH","Valor USD_num":cash_after}])],ignore_index=True)
-
-    vals=vals[vals["Valor USD_num"]>0].sort_values("Valor USD_num",ascending=False)
-    top5_before=app_df.groupby("Ticker")["Valor USD_num"].sum().sort_values(ascending=False).head(5).sum()/total if total else 0
-    top5_after=vals.head(5)["Valor USD_num"].sum()/new_total if new_total else 0
-
+    top=lambda dic,den: sum(sorted((max(0,v) for v in dic.values()),reverse=True)[:5])/den
+    cash_after=holdings.get("CASH",0.0)
     return {
-        "ticker":ticker,"operation":operation,"amount":float(amount),"funding_mode":funding_mode,
+        "ticker":ticker,"operation":operation,"amount":amount,"funding_mode":funding_mode,
+        "source_ticker":source_ticker if operation=="Comprar" and sale_used else None,
+        "source_before":source_before,"source_after":holdings.get(str(source_ticker),0.0) if source_ticker else 0.0,
         "total_before":total,"total_after":new_total,
-        "value_before":current,"value_after":new_value,
+        "value_before":current,"value_after":holdings[ticker],
         "cash_before":cash_before,"cash_after":cash_after,
-        "weight_before":before_weight,"weight_after":after_weight,
-        "top5_before":top5_before,"top5_after":top5_after
+        "weight_before":current/total if total else 0,"weight_after":holdings[ticker]/new_total,
+        "top5_before":top(before,total),"top5_after":top(holdings,new_total)
     }
 
 COMPARISON_HELP={
@@ -879,52 +883,90 @@ elif page=="Comparador":
 
 elif page=="Simulador":
     st.subheader("Simulador de operación")
-    st.caption("Cálculo determinístico sobre la cartera actual. No ejecuta operaciones.")
+    st.caption("Impacto estimado sobre la cartera actual. No ejecuta operaciones; no incluye comisiones ni deslizamiento.")
     render_active_context()
+    holdings=data.get("app_feed_v2",pd.DataFrame()).copy()
+    if holdings.empty:
+        st.info("No se dispone de la cartera para simular.")
+    else:
+        tickers=sorted(t for t in holdings["Ticker"].dropna().astype(str).unique() if t!="CASH")
+        active=st.session_state.get("active_ticker","")
+        idx=tickers.index(active) if active in tickers else 0
+        a,b,c=st.columns([1,1,1.1])
+        ticker=a.selectbox("Activo",tickers,index=idx,key="sim_ticker")
+        operation=b.selectbox("Operación",["Comprar","Vender"],key="sim_op")
+        amount=c.number_input("Monto USD",min_value=0.0,step=100.0,key="sim_amount")
+        source_ticker=None
+        cash_amount=0.0
+        if operation=="Comprar":
+            funding_mode=st.selectbox("¿De dónde salen los fondos?",
+                ["CASH","Venta de otro activo","CASH + venta de activo","Aporte externo"],
+                help="La venta es una operación simulada simultánea: los fondos obtenidos financian la compra sin cambiar el patrimonio.")
+            if funding_mode in ("Venta de otro activo","CASH + venta de activo"):
+                options=[t for t in tickers if t!=ticker]
+                source_ticker=st.selectbox("Activo a vender para financiar",options)
+                if funding_mode=="CASH + venta de activo":
+                    max_cash=min(float(holdings.loc[holdings["Ticker"]=="CASH","Valor USD_num"].sum()),float(amount))
+                    cash_amount=st.number_input("Usar de CASH (USD)",min_value=0.0,max_value=max(0.0,max_cash),value=0.0,step=100.0)
+                    st.caption(f"Venta estimada de {source_ticker}: {fmt_usd(max(0.0,amount-cash_amount))}")
+                else:
+                    st.caption(f"Venta estimada de {source_ticker}: {fmt_usd(amount)}")
+        else:
+            funding_mode=st.selectbox("Destino de los fondos",["CASH","Retiro externo"],
+                help="CASH conserva el patrimonio dentro de la cartera; retiro externo lo reduce.")
 
-    tickers=sorted(data.get("app_feed_v2",pd.DataFrame()).get("Ticker",pd.Series(dtype=str)).dropna().astype(str).unique().tolist())
-    active=st.session_state.get("active_ticker","")
-    idx=tickers.index(active) if active in tickers else 0
-    c1,c2,c3,c4=st.columns([1,1,1,1.35])
-    ticker=c1.selectbox("Ticker",tickers,index=idx if tickers else 0,key="sim_ticker") if tickers else ""
-    operation=c2.selectbox("Operación",["Comprar","Vender"],key="sim_op")
-    amount=c3.number_input("Monto USD",min_value=0.0,step=100.0,key="sim_amount")
-    funding_mode=c4.selectbox(
-        "Origen / destino",
-        ["Reasignación interna","Aporte / retiro externo"],
-        help="Reasignación interna usa o genera CASH y mantiene constante el patrimonio total. Aporte/retiro modifica el patrimonio."
-    )
-
-    if ticker and amount>0:
-        sim=simulate_trade(ticker,operation,amount,funding_mode=funding_mode)
-        if sim and sim.get("error"):
-            st.error(sim["error"])
-        elif sim:
-            a,b,c,d,e=st.columns(5)
-            a.metric("Valor posición",fmt_usd(sim["value_after"]),delta=fmt_usd(sim["value_after"]-sim["value_before"]))
-            b.metric("Peso posición",fmt_pct(sim["weight_after"]),delta=f'{(sim["weight_after"]-sim["weight_before"])*100:+.2f} pp')
-            c.metric("CASH",fmt_usd(sim["cash_after"]),delta=fmt_usd(sim["cash_after"]-sim["cash_before"]) if sim["funding_mode"]=="Reasignación interna" else "sin efecto directo")
-            d.metric("Patrimonio total",fmt_usd(sim["total_after"]),delta=fmt_usd(sim["total_after"]-sim["total_before"]))
-            e.metric("Top 5",fmt_pct(sim["top5_after"]),delta=f'{(sim["top5_after"]-sim["top5_before"])*100:+.2f} pp')
-
-            st.markdown("#### Antes vs. después")
-            simdf=pd.DataFrame([
-                {"Métrica":"Valor posición","Antes":sim["value_before"],"Después":sim["value_after"],"Unidad":"USD"},
-                {"Métrica":"Peso posición","Antes":sim["weight_before"]*100,"Después":sim["weight_after"]*100,"Unidad":"%"},
-                {"Métrica":"Top 5","Antes":sim["top5_before"]*100,"Después":sim["top5_after"]*100,"Unidad":"%"},
-            ])
-            fig=px.bar(simdf,x="Métrica",y=["Antes","Después"],barmode="group")
-            st.plotly_chart(fig,width='stretch')
-
-            if st.button("Pedir lectura al Asesor IA",key="sim_to_ai"):
-                st.session_state["force_page"]="Asesor IA"
-                st.session_state["pending_advisor_prompt"]=(
-                    f"Analizá esta simulación ({funding_mode}): {operation.lower()} US$ {amount:.0f} de {ticker}. "
-                    f"El peso pasa de {fmt_pct(sim['weight_before'])} a {fmt_pct(sim['weight_after'])}; "
-                    f"Top 5 pasa de {fmt_pct(sim['top5_before'])} a {fmt_pct(sim['top5_after'])}. "
-                    "Quiero riesgos, concentración y contradicciones con la cartera actual."
-                )
-                st.rerun()
+        if amount>0:
+            sim=simulate_trade(ticker,operation,amount,funding_mode,source_ticker,cash_amount)
+            if sim and sim.get("error"):
+                st.error(sim["error"])
+            elif sim:
+                def sim_delta_usd(value):
+                    return f"{'+' if value>0 else '-' if value<0 else ''}{fmt_usd(abs(value))}"
+                with st.container(key="simulator_metrics"):
+                    a,b,c=st.columns(3)
+                    a.metric("Valor posición",fmt_usd(sim["value_after"]),
+                             delta=sim_delta_usd(sim["value_after"]-sim["value_before"]))
+                    b.metric("Peso posición",fmt_pct(sim["weight_after"]),
+                             delta=f'{(sim["weight_after"]-sim["weight_before"])*100:+.2f} pp')
+                    c.metric("CASH",fmt_usd(sim["cash_after"]),
+                             delta=sim_delta_usd(sim["cash_after"]-sim["cash_before"]),
+                             delta_color="off")
+                    d,e=st.columns(2)
+                    diff=sim["total_after"]-sim["total_before"]
+                    d.metric("Patrimonio total",fmt_usd(sim["total_after"]),
+                             delta=sim_delta_usd(diff),delta_color="off" if abs(diff)<0.005 else "normal")
+                    e.metric("Top 5",fmt_pct(sim["top5_after"]),
+                             delta=f'{(sim["top5_after"]-sim["top5_before"])*100:+.2f} pp',delta_color="off")
+                st.markdown("#### Antes vs. después")
+                rows=[
+                    ("Activo "+ticker,sim["value_before"],sim["value_after"],"USD"),
+                    ("CASH",sim["cash_before"],sim["cash_after"],"USD"),
+                ]
+                if sim.get("source_ticker"):
+                    rows.append(("Activo "+str(sim["source_ticker"]),sim["source_before"],sim["source_after"],"USD"))
+                rows.append(("Patrimonio",sim["total_before"],sim["total_after"],"USD"))
+                table=pd.DataFrame([{"Concepto":label,"Antes":before,"Después":after,"Cambio":after-before}
+                                    for label,before,after,unit in rows])
+                st.dataframe(table,hide_index=True,width='stretch',
+                    column_config={k:st.column_config.NumberColumn(k,format="US$ %.2f")
+                                   for k in ("Antes","Después","Cambio")})
+                x,y=st.columns(2)
+                x.metric("Peso del activo · antes → después",
+                    f"{fmt_pct(sim['weight_before'])} → {fmt_pct(sim['weight_after'])}")
+                y.metric("Concentración Top 5 · antes → después",
+                    f"{fmt_pct(sim['top5_before'])} → {fmt_pct(sim['top5_after'])}")
+                st.caption("Los cambios en USD y los cambios de peso se muestran por separado para no mezclar escalas.")
+                if st.button("Pedir lectura al Asesor IA",key="sim_to_ai"):
+                    description=f"{operation.lower()} US$ {amount:,.0f} de {ticker} ({funding_mode})"
+                    if sim.get("source_ticker"):
+                        description+=f", financiado con venta de {sim['source_ticker']}"
+                    st.session_state["force_page"]="Asesor IA"
+                    st.session_state["pending_advisor_prompt"]=(
+                        f"Analizá esta simulación: {description}. "
+                        f"Peso del activo: {fmt_pct(sim['weight_before'])} → {fmt_pct(sim['weight_after'])}. "
+                        f"Top 5: {fmt_pct(sim['top5_before'])} → {fmt_pct(sim['top5_after'])}. "
+                        "Evaluá concentración, diversificación y riesgos frente a la cartera.")
+                    st.rerun()
 
 elif page=="Asesor IA":
     st.subheader("Asesor IA")
