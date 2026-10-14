@@ -338,45 +338,89 @@ def simulate_trade(ticker, operation, amount, funding_mode="Reasignación intern
     }
 
 COMPARISON_HELP={
-"P/E":"Cuánto pago por las ganancias actuales",
-"Forward P/E":"Cuánto pago por las ganancias futuras esperadas",
-"PEG":"El precio es razonable para su crecimiento",
-"EV/EBITDA":"Cuánto pago por el negocio en relación con su resultado operativo",
+    "P/E":"Precio respecto de ganancias actuales",
+    "Forward P/E":"Precio respecto de ganancias esperadas",
+    "PEG":"Valuación relativa al crecimiento de utilidades",
+    "EV/EBITDA":"Valor de la empresa respecto del resultado operativo",
+    "ROE":"Rentabilidad sobre patrimonio",
+    "ROA":"Rentabilidad sobre activos; especialmente útil en bancos",
+    "ROIC":"Rentabilidad sobre capital invertido",
+    "Crecimiento ingresos 3-5a":"Crecimiento anualizado de ingresos en 3–5 años",
+    "Crecimiento EPS 3-5a":"Crecimiento anualizado de utilidad por acción en 3–5 años",
+    "Free Cash Flow":"Caja disponible después de inversiones",
+    "NIM":"Margen neto de intereses (bancos)",
+    "Morosidad":"Proporción de créditos en mora (bancos)",
+    "Cobertura mora":"Provisiones frente a cartera en mora (bancos)",
+    "Ratio eficiencia":"Costos operativos respecto de ingresos (bancos)",
+    "Capital regulatorio":"Capital regulatorio disponible (bancos)"
 }
+LOWER_BETTER={"P/E","Forward P/E","PEG","EV/EBITDA","Morosidad","Ratio eficiencia"}
+HIGHER_BETTER={"ROE","ROA","ROIC","Crecimiento ingresos 3-5a","Crecimiento EPS 3-5a",
+               "Free Cash Flow","NIM","Cobertura mora","Capital regulatorio"}
 def render_company_comparison(result):
     if not result:return
     a=result.get("company_a","Empresa A"); b=result.get("company_b","Empresa B")
     rows=[]
     for m in result.get("metrics",[]):
-        name=m.get("indicator","")
+        name=str(m.get("indicator","")).strip()
+        if not name or m.get("relevant") is False:
+            continue
         try: va=float(m.get("a")) if m.get("a") is not None else None
-        except: va=None
+        except (TypeError,ValueError): va=None
         try: vb=float(m.get("b")) if m.get("b") is not None else None
-        except: vb=None
-        score=0; winner="Sin ventaja"
-        if va and vb and va>0 and vb>0:
-            mid=(va+vb)/2
-            score=(va-vb)/mid*100 if mid else 0
-            if score<-1:winner=a
-            elif score>1:winner=b
-        rows.append({"Indicador":name,a:va,b:vb,"Ventaja relativa":score,"Favorece":winner,"Qué significa":COMPARISON_HELP.get(name,"")})
+        except (TypeError,ValueError): vb=None
+        # Omitir métricas que no aplican a este tipo de empresa.
+        if va is None and vb is None:continue
+        winner="Sin ventaja clara"
+        if va is not None and vb is not None:
+            denom=max(abs(va),abs(vb),1e-9)
+            if abs(va-vb)/denom>=0.01:
+                if name in LOWER_BETTER and va>0 and vb>0:
+                    winner=a if va<vb else b
+                elif name in HIGHER_BETTER:
+                    winner=a if va>vb else b
+        unit=m.get("unit","")
+        def fmt(v):
+            if v is None:return "No disponible"
+            if unit=="%":return f"{v:,.1f}%"
+            if unit=="USD":return f"US$ {v:,.0f}"
+            if unit=="x" or name in {"P/E","Forward P/E","PEG","EV/EBITDA"}:return f"{v:,.2f}x"
+            return f"{v:,.2f}"
+        desc=COMPARISON_HELP.get(name,m.get("description",""))
+        rows.append({"Indicador":name,"Descripción":desc,a:fmt(va),b:fmt(vb),"Favorece":winner})
+    st.subheader(f"Comparación de fundamentales · {a} vs {b}")
     if rows:
-        dfc=pd.DataFrame(rows)
-        st.subheader(f"Comparación de valuación · {a} vs {b}")
-        st.caption("En estos múltiplos, un valor menor suele ser más favorable sólo si las empresas son comparables y los datos son positivos/significativos.")
-        fig=px.bar(dfc,x="Ventaja relativa",y="Indicador",orientation="h",
-                   custom_data=[a,b,"Favorece","Qué significa"])
-        fig.update_traces(hovertemplate="<b>%{y}</b><br>"+a+": %{customdata[0]:.2f}x<br>"+b+": %{customdata[1]:.2f}x<br>Favorece: %{customdata[2]}<br>%{customdata[3]}<extra></extra>")
-        fig.add_vline(x=0,line_width=1)
-        fig.update_layout(height=330,xaxis_title=f"← favorece {a}   |   favorece {b} →",yaxis_title=None)
-        st.plotly_chart(fig,width='stretch')
-        st.dataframe(dfc[["Indicador",a,b,"Favorece"]],hide_index=True,width='stretch')
-        fa=(dfc["Favorece"]==a).sum(); fb=(dfc["Favorece"]==b).sum(); fn=(dfc["Favorece"]=="Sin ventaja").sum()
-        st.caption(f"Lectura rápida de estos múltiplos: {a} favorecido en {fa}, {b} en {fb}, sin ventaja clara en {fn}. Esto no constituye un ganador global.")
-        with st.expander("Ayuda memoria de indicadores"):
-            for k,v in COMPARISON_HELP.items(): st.markdown(f"**{k}** — {v}")
+        # La explicación está en una línea secundaria bajo el nombre del indicador.
+        html=['<div class="cmp-wrap"><table class="cmp-table"><thead><tr>',
+              '<th>Indicador</th><th>'+__import__("html").escape(str(a))+'</th><th>'+
+              __import__("html").escape(str(b))+'</th><th>Favorece</th></tr></thead><tbody>']
+        from html import escape
+        for r in rows:
+            h=escape(str(r["Indicador"]))
+            d=escape(str(r["Descripción"]))
+            html.append(f'<tr><td><strong>{h}</strong><div class="cmp-desc">{d}</div></td>'
+                        f'<td>{escape(str(r[a]))}</td><td>{escape(str(r[b]))}</td>'
+                        f'<td>{escape(str(r["Favorece"]))}</td></tr>')
+        html.append('</tbody></table></div>')
+        st.markdown("""
+        <style>
+        .cmp-wrap{overflow-x:auto}
+        .cmp-table{width:100%;border-collapse:collapse;font-size:.94rem}
+        .cmp-table th,.cmp-table td{padding:12px;border-bottom:1px solid #344353;text-align:left}
+        .cmp-table th{background:#182331}
+        .cmp-desc{color:#92a4b7;font-size:.78rem;margin-top:3px;line-height:1.35}
+        </style>""",unsafe_allow_html=True)
+        st.markdown("".join(html),unsafe_allow_html=True)
+        st.caption("«Favorece» es una ventaja relativa orientativa por indicador, no una recomendación ni un ganador global. Los múltiplos bajos pueden reflejar mayor riesgo; importan la calidad, el sector y la comparabilidad de las cifras.")
+    else:
+        st.info("No hay indicadores sectorialmente relevantes y verificables disponibles para esta comparación.")
+    bullets=result.get("bullets",[])
+    if isinstance(bullets,list) and bullets:
+        st.markdown("### Resumen ejecutivo")
+        for x in bullets[:6]:
+            st.markdown(f"- {x}")
     if result.get("analysis"):
-        st.markdown("### Lectura del asesor")
+        st.markdown("### Desarrollo")
         st.markdown(result["analysis"])
 
 st.title(page)

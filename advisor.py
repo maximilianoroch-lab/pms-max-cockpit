@@ -182,18 +182,25 @@ def compare_companies_structured(ticker1,ticker2,data,filtered_positions,analysi
         return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":"Falta configurar OPENAI_API_KEY en Streamlit Secrets."}
     ctx=compact(data,filtered_positions,user_prompt=f'{ticker1} {ticker2}')
     ctx["analysis_context"]=analysis_context or {}
-    prompt=f"""Compará {ticker1} contra {ticker2} usando datos fundamentales actuales y verificables.
-Obligatorio: P/E, Forward P/E, PEG y EV/EBITDA. Si un dato no aplica o no es significativo, devolvé null.
-Usá búsqueda web. No inventes valores. Estos múltiplos son 'menor suele ser más favorable', pero no declares un ganador global sólo por eso.
-En analysis considerá crecimiento, márgenes, balance, FCF, calidad y contexto de cartera. Indicá brevemente fuentes y fecha.
+    prompt=f"""Compará {ticker1} contra {ticker2} usando datos fundamentales actuales, homogéneos y verificables.
+Primero identificá el sector/tipo de ambas empresas. Mostrá EXCLUSIVAMENTE indicadores relevantes:
+- Empresas no financieras: P/E, Forward P/E, PEG, EV/EBITDA, ROE, ROIC, crecimiento anualizado de ingresos 3-5 años, crecimiento anualizado EPS 3-5 años y Free Cash Flow.
+- Bancos: P/E, Forward P/E, ROE, ROA, crecimiento anualizado de ingresos 3-5 años (sólo si comparable), crecimiento EPS 3-5 años, NIM, morosidad, cobertura de mora, ratio de eficiencia y capital regulatorio.
+- Otras financieras: adaptá selectivamente según sentido económico.
+NO incluyas EV/EBITDA, ROIC, PEG o FCF convencional para bancos. NO muestres métricas no pertinentes.
+Si falta un dato, usá null; no inventes. Si ambos valores faltan, omití la métrica.
+Para crecimientos usá CAGR calculada con cifras históricas, no estimaciones sin identificarlas. Preferí series homogéneas. Para métricas % enviá números en puntos porcentuales (12.3 significa 12,3%).
+Usá búsqueda web y fuentes primarias cuando sea posible; indicá fechas y limitaciones de comparabilidad.
+En bullets escribí 4 a 6 puntos breves y contrastantes, con ventajas/desventajas EXPLÍCITAS por ticker; evitá un empate vago.
+En analysis escribí un desarrollo de extensión moderada (aprox 350 a 550 palabras), con riesgos, fortalezas, contexto PMS, balance y conclusión condicionada. No repitas todos los bullets.
+«Favorece» de cada fila es orientación por métrica, no decisión global.
 Contexto PMS: {json.dumps(ctx,ensure_ascii=False,default=str)}
-Respondé SOLO JSON válido:
-{{"company_a":"{ticker1.upper()}","company_b":"{ticker2.upper()}","metrics":[
-{{"indicator":"P/E","a":null,"b":null}},
-{{"indicator":"Forward P/E","a":null,"b":null}},
-{{"indicator":"PEG","a":null,"b":null}},
-{{"indicator":"EV/EBITDA","a":null,"b":null}}
-],"analysis":"..."}}"""
+Respondé SOLO JSON válido, sin markdown externo, con esta forma:
+{{"company_a":"{ticker1.upper()}","company_b":"{ticker2.upper()}",
+"metrics":[{{"indicator":"P/E","a":12.5,"b":16.0,"unit":"x","relevant":true}},
+{{"indicator":"ROE","a":13.2,"b":10.4,"unit":"%","relevant":true}}],
+"bullets":["A FAVOR {ticker1.upper()}: ...","A FAVOR {ticker2.upper()}: ...","RIESGO {ticker1.upper()}: ...","RIESGO {ticker2.upper()}: ..."],
+"analysis":"..."}}"""
     client=OpenAI(api_key=api_key)
     try:
         r=client.responses.create(
