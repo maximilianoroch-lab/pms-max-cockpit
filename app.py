@@ -675,12 +675,39 @@ elif page=="Custodia":
         c.metric("Cuentas",int(s["Cantidad cuentas_num"]))
         rows=detail[detail["Custodio"]==cust].copy().sort_values("Valor USD_num",ascending=False)
 
-    chart_rows=rows.head(15).sort_values("Valor USD_num",ascending=True)
-    fig=px.bar(
-        chart_rows,x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
-        labels={"Valor USD_num":"Valor USD"}
-    )
-    st.plotly_chart(fig,width='stretch')
+    if cust=="TODOS":
+        st.subheader("Distribución por custodio")
+        # Agrupar por custodio y cuenta: barra apilada. Sólo Criteria se
+        # desglosa visualmente por cuenta; los demás quedan como una barra.
+        chart_data=detail.dropna(subset=["Custodio"]).copy()
+        chart_data["Custodio"]=chart_data["Custodio"].astype(str)
+        chart_data["Cuenta"]=chart_data["Cuenta"].fillna("Sin cuenta").astype(str)
+        chart_data["Grupo"]=chart_data.apply(
+            lambda r: r["Cuenta"] if r["Custodio"].strip().upper()=="CRITERIA" else r["Custodio"],axis=1
+        )
+        chart_data=chart_data.groupby(["Custodio","Grupo"],as_index=False)["Valor USD_num"].sum()
+        cust_totals=chart_data.groupby("Custodio")["Valor USD_num"].sum().sort_values(ascending=False)
+        if not chart_data.empty:
+            # Categorías mayores arriba. Criteria 4666/4704 tienen colores separados.
+            fig=px.bar(
+                chart_data,x="Valor USD_num",y="Custodio",color="Grupo",orientation="h",
+                category_orders={"Custodio":cust_totals.index.tolist()[::-1]},
+                labels={"Valor USD_num":"Valor USD","Grupo":"Cuenta / custodio"},
+                hover_data={"Custodio":True,"Grupo":True,"Valor USD_num":":,.0f"}
+            )
+            fig.update_layout(barmode="stack",height=max(300,65*len(cust_totals)+100),
+                margin=dict(l=10,r=10,t=10,b=10),legend_title_text="Cuenta / custodio")
+            st.plotly_chart(fig,width='stretch')
+        else:
+            st.info("No hay valores por custodio para graficar.")
+    else:
+        st.subheader(f"Principales posiciones · {cust}")
+        chart_rows=rows.head(15).sort_values("Valor USD_num",ascending=True)
+        fig=px.bar(
+            chart_rows,x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
+            labels={"Valor USD_num":"Valor USD"}
+        )
+        st.plotly_chart(fig,width='stretch')
     rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Valor USD_num","Peso custodio_num"]].copy()
     rows_show["Peso custodio_num"]=pct_points(rows_show["Peso custodio_num"])
     st.dataframe(
