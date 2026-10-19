@@ -739,6 +739,7 @@ elif page=="Riesgo":
     top_positions_table(15)
 
 elif page=="Custodia":
+    st.info("CASH auditado al 16/10/2026 · Criteria 4666: ARS $2.682.400 + US$ 100 · Criteria 4704: ARS $2.682.400 + US$ 200. Es un desglose informativo; no sumar nuevamente al patrimonio.")
     summ=data["app_custodia_resumen_v2"].copy()
     detail=data["app_custodia_detalle_v2"].copy()
     cust_options=["TODOS"]+summ["Custodio"].dropna().astype(str).tolist()
