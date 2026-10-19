@@ -768,25 +768,9 @@ elif page=="Custodia":
     if not cash_df.empty and "Valor USD al corte" in cash_df.columns:
         cash_cut=sum(local_num(v) for v in cash_df["Valor USD al corte"] if pd.notna(v)) * 1
     cash_gap=abs(cash_position-cash_cut)/cash_cut if cash_cut>0 else float("inf")
-    with st.expander("Control automático de integridad",expanded=False):
-        a,b,c=st.columns(3)
-        a.metric("Diferencia posiciones / custodios",fmt_usd(difference))
-        b.metric("Tickers",f"{position_count} / {cust_count}")
-        c.metric("Desvío CASH",f"{cash_gap:.2%}" if cash_cut else "Sin base")
-        if abs(difference)<=max(0.10,position_total*0.000001) and position_count==cust_count and ticker_issues.empty:
-            st.success("Posiciones y custodia conciliadas (tolerancia de redondeo).")
-        else:
-            st.error("Descuadre entre posiciones y custodia: revisar fuente antes de publicar.")
-        if cash_cut<=0:
-            st.warning("No hay importe CASH auditado para comparar.")
-        elif cash_gap<=0.02:
-            st.success("CASH dentro de la tolerancia aceptada del 2% respecto del corte auditado.")
-        else:
-            st.warning("CASH supera el margen del 2% respecto del corte: verificar movimientos o valuación. Una diferencia temporal no implica necesariamente error.")
-        if not ticker_issues.empty:
-            st.error(f"{len(ticker_issues)} ticker(s) con diferencia superior a US$ 0,10 entre posiciones y custodia.")
-            st.dataframe(ticker_issues.rename("Diferencia USD").reset_index(),hide_index=True,use_container_width=True)
-        st.caption("La referencia de CASH es el valor USD al corte auditado, no la cotización actual. Esta pantalla es informativa; no modifica el patrimonio.")
+    # Controles internos; sin exponer umbrales ni auditorias en el dashboard.
+    st.session_state["_custody_integrity_ok"]=bool(abs(difference)<=max(0.10,position_total*0.000001) and position_count==cust_count and ticker_issues.empty)
+    st.session_state["_cash_integrity_ok"]=bool(cash_cut>0 and cash_gap<=0.02)
     cust_options=["TODOS"]+summ["Custodio"].dropna().astype(str).tolist()
     cust=st.selectbox("Custodio",cust_options,index=0)
 
