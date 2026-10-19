@@ -846,11 +846,14 @@ elif page=="Custodia":
     else:
         st.subheader(f"Principales posiciones · {cust}")
         chart_rows=rows.head(15).sort_values("Valor USD_num",ascending=True)
-        fig=px.bar(
-            chart_rows,x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
-            labels={"Valor USD_num":"Valor USD"}
-        )
-        st.plotly_chart(fig,width='stretch')
+        if chart_rows.empty:
+            st.info("Sin activos para mostrar con estos filtros.")
+        else:
+            fig=px.bar(
+                chart_rows,x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
+                labels={"Valor USD_num":"Valor USD"}
+            )
+            st.plotly_chart(fig,width='stretch')
     rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Valor USD_num","Peso custodio_num"]].copy()
     rows_show["Peso custodio_num"]=pct_points(rows_show["Peso custodio_num"])
     st.dataframe(
