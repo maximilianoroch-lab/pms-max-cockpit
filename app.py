@@ -739,7 +739,16 @@ elif page=="Riesgo":
     top_positions_table(15)
 
 elif page=="Custodia":
-    st.info("CASH auditado al 16/10/2026 · Criteria 4666: ARS $2.682.400 + US$ 100 · Criteria 4704: ARS $2.682.400 + US$ 200. Es un desglose informativo; no sumar nuevamente al patrimonio.")
+    cash_df=data.get("custodia_cash_v2",pd.DataFrame()).copy()
+    if not cash_df.empty and {"Cuenta","Custodio","Moneda","Saldo nativo","Estado"}.issubset(cash_df.columns):
+        cash_df=cash_df[(cash_df["Estado"].astype(str).str.upper()=="AUDITADO") & cash_df["Cuenta"].notna()]
+        st.caption("CASH por cuenta y moneda · fuente custodia_cash_v2 (corte auditado; no es saldo bancario en tiempo real). No se suma nuevamente al patrimonio.")
+        if not cash_df.empty:
+            st.dataframe(cash_df[[c for c in ["Fecha corte","Cuenta","Custodio","Moneda","Saldo nativo","Valor USD al corte","Valor USD referencial actual"] if c in cash_df.columns]],hide_index=True,use_container_width=True)
+        else:
+            st.warning("La fuente no contiene filas CASH auditadas.")
+    else:
+        st.warning("No se pudo obtener el desglose auditado custodia_cash_v2.")
     summ=data["app_custodia_resumen_v2"].copy()
     detail=data["app_custodia_detalle_v2"].copy()
     cust_options=["TODOS"]+summ["Custodio"].dropna().astype(str).tolist()
