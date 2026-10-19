@@ -6,7 +6,7 @@ FEEDS={
 "looker_feed_v2":"A1:T2000","app_feed_v2":"A1:T67","app_home":"A69:F77","app_banner":"A80:D89",
 "dashboard_diversificacion_v2":"A1:E20","dashboard_exposicion_v2":"A1:J30","dashboard_riesgo_v2":"A1:E30",
 "dashboard_evolucion_v2":"A1:F30","dashboard_custodia_v2":"A1:E30","dashboard_tipo_v2":"A1:F20",
-"app_custodia_detalle_v2":"A1:L500","app_custodia_resumen_v2":"A1:J30"}
+"custodia_cash_v2":"A1:L100","app_custodia_detalle_v2":"A1:L500","app_custodia_resumen_v2":"A1:J30"}
 
 def _url(sid,sheet,rg): return f"https://docs.google.com/spreadsheets/d/{sid}/gviz/tq?tqx=out:csv&sheet={sheet}&range={rg}"
 
