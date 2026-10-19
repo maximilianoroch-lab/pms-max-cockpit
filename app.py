@@ -751,6 +751,34 @@ elif page=="Custodia":
         st.warning("No se pudo obtener el desglose auditado custodia_cash_v2.")
     summ=data["app_custodia_resumen_v2"].copy()
     detail=data["app_custodia_detalle_v2"].copy()
+    # Control de integridad de solo lectura: nunca incorpora CASH como activo adicional.
+    position_total=float(data["app_feed_v2"]["Valor USD_num"].sum())
+    custody_total=float(summ["Valor USD_num"].sum())
+    difference=position_total-custody_total
+    # Diferencias de pocos centavos son esperables por redondeo de custodia.
+    position_count=len(data["app_feed_v2"].dropna(subset=["Ticker"]))
+    cust_count=detail["Ticker"].dropna().astype(str).nunique()
+    cash_position=float(data["app_feed_v2"].loc[data["app_feed_v2"]["Ticker"].astype(str).str.upper()=="CASH","Valor USD_num"].sum())
+    cash_cut=0.0
+    if not cash_df.empty and "Valor USD al corte" in cash_df.columns:
+        cash_cut=sum(local_num(v) for v in cash_df["Valor USD al corte"] if pd.notna(v)) * 1
+    cash_gap=abs(cash_position-cash_cut)/cash_cut if cash_cut>0 else float("inf")
+    with st.expander("Control automático de integridad",expanded=False):
+        a,b,c=st.columns(3)
+        a.metric("Diferencia posiciones / custodios",fmt_usd(difference))
+        b.metric("Tickers",f"{position_count} / {cust_count}")
+        c.metric("Desvío CASH",f"{cash_gap:.2%}" if cash_cut else "Sin base")
+        if abs(difference)<=max(0.10,position_total*0.000001) and position_count==cust_count:
+            st.success("Posiciones y custodia conciliadas (tolerancia de redondeo).")
+        else:
+            st.error("Descuadre entre posiciones y custodia: revisar fuente antes de publicar.")
+        if cash_cut<=0:
+            st.warning("No hay importe CASH auditado para comparar.")
+        elif cash_gap<=0.02:
+            st.success("CASH dentro de la tolerancia aceptada del 2% respecto del corte auditado.")
+        else:
+            st.warning("CASH supera el margen del 2% respecto del corte: verificar movimientos o valuación. Una diferencia temporal no implica necesariamente error.")
+        st.caption("La referencia de CASH es el valor USD al corte auditado, no la cotización actual. Esta pantalla es informativa; no modifica el patrimonio.")
     cust_options=["TODOS"]+summ["Custodio"].dropna().astype(str).tolist()
     cust=st.selectbox("Custodio",cust_options,index=0)
 
