@@ -758,6 +758,11 @@ elif page=="Custodia":
     # Diferencias de pocos centavos son esperables por redondeo de custodia.
     position_count=len(data["app_feed_v2"].dropna(subset=["Ticker"]))
     cust_count=detail["Ticker"].dropna().astype(str).nunique()
+    # Conciliación por ticker: detecta diferencias compensadas que un total global ocultaría.
+    by_position=data["app_feed_v2"].dropna(subset=["Ticker"]).groupby("Ticker")["Valor USD_num"].sum()
+    by_custody=detail.dropna(subset=["Ticker"]).groupby("Ticker")["Valor USD_num"].sum()
+    ticker_delta=by_position.sub(by_custody,fill_value=0.0)
+    ticker_issues=ticker_delta[ticker_delta.abs()>0.10]
     cash_position=float(data["app_feed_v2"].loc[data["app_feed_v2"]["Ticker"].astype(str).str.upper()=="CASH","Valor USD_num"].sum())
     cash_cut=0.0
     if not cash_df.empty and "Valor USD al corte" in cash_df.columns:
@@ -768,7 +773,7 @@ elif page=="Custodia":
         a.metric("Diferencia posiciones / custodios",fmt_usd(difference))
         b.metric("Tickers",f"{position_count} / {cust_count}")
         c.metric("Desvío CASH",f"{cash_gap:.2%}" if cash_cut else "Sin base")
-        if abs(difference)<=max(0.10,position_total*0.000001) and position_count==cust_count:
+        if abs(difference)<=max(0.10,position_total*0.000001) and position_count==cust_count and ticker_issues.empty:
             st.success("Posiciones y custodia conciliadas (tolerancia de redondeo).")
         else:
             st.error("Descuadre entre posiciones y custodia: revisar fuente antes de publicar.")
@@ -778,6 +783,9 @@ elif page=="Custodia":
             st.success("CASH dentro de la tolerancia aceptada del 2% respecto del corte auditado.")
         else:
             st.warning("CASH supera el margen del 2% respecto del corte: verificar movimientos o valuación. Una diferencia temporal no implica necesariamente error.")
+        if not ticker_issues.empty:
+            st.error(f"{len(ticker_issues)} ticker(s) con diferencia superior a US$ 0,10 entre posiciones y custodia.")
+            st.dataframe(ticker_issues.rename("Diferencia USD").reset_index(),hide_index=True,use_container_width=True)
         st.caption("La referencia de CASH es el valor USD al corte auditado, no la cotización actual. Esta pantalla es informativa; no modifica el patrimonio.")
     cust_options=["TODOS"]+summ["Custodio"].dropna().astype(str).tolist()
     cust=st.selectbox("Custodio",cust_options,index=0)
