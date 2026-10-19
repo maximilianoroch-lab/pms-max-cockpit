@@ -822,7 +822,7 @@ elif page=="Custodia":
         st.subheader("Distribución por custodio")
         # Agrupar por custodio y cuenta: barra apilada. Sólo Criteria se
         # desglosa visualmente por cuenta; los demás quedan como una barra.
-        chart_data=detail.dropna(subset=["Custodio"]).copy()
+        chart_data=rows.dropna(subset=["Custodio"]).copy()
         chart_data["Custodio"]=chart_data["Custodio"].astype(str)
         chart_data["Cuenta"]=chart_data["Cuenta"].fillna("Sin cuenta").astype(str)
         chart_data["Grupo"]=chart_data.apply(
