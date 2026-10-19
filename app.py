@@ -800,6 +800,24 @@ elif page=="Custodia":
         c.metric("Cuentas",int(s["Cantidad cuentas_num"]))
         rows=detail[detail["Custodio"]==cust].copy().sort_values("Valor USD_num",ascending=False)
 
+    # Navegación progresiva: custodio → cuenta → ticker; nunca cambia el patrimonio consolidado.
+    accounts=sorted(rows["Cuenta"].dropna().astype(str).unique().tolist())
+    account=st.selectbox("Cuenta",["Todas las cuentas"]+accounts,key="custody_account_drill")
+    if account!="Todas las cuentas":
+        rows=rows[rows["Cuenta"].astype(str)==account].copy()
+    tickers=sorted(rows["Ticker"].dropna().astype(str).unique().tolist())
+    ticker=st.selectbox("Activo",["Todos los activos"]+tickers,key="custody_ticker_drill")
+    if ticker!="Todos los activos":
+        rows=rows[rows["Ticker"].astype(str)==ticker].copy()
+    selected_value=float(rows["Valor USD_num"].sum())
+    selected_weight=selected_value/position_total if position_total else 0.0
+    st.caption("Detalle filtrado (sin modificar el patrimonio global)")
+    v1,v2,v3=st.columns(3)
+    v1.metric("Valor seleccionado",fmt_usd(selected_value))
+    v2.metric("Peso en cartera",fmt_pct(selected_weight))
+    v3.metric("Registros",len(rows))
+    if rows.empty:
+        st.info("No hay posiciones con estos filtros.")
     if cust=="TODOS":
         st.subheader("Distribución por custodio")
         # Agrupar por custodio y cuenta: barra apilada. Sólo Criteria se
