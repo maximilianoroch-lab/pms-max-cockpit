@@ -16,6 +16,20 @@ st.markdown("""
 [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {color: #e5edf6 !important;}
 [data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {color: #a9bfd3 !important;}
 [data-testid="stSidebar"] [role="radiogroup"] p {color: #e5edf6 !important;}
+/* Sidebar dark palette: readable text across Streamlit widget internals. */
+[data-testid="stSidebar"] {color: #e8f1fb !important; color-scheme: dark;}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] *,
+[data-testid="stSidebar"] [data-testid="stText"],
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] *,
+[data-testid="stSidebar"] div[data-testid="stRadio"] label,
+[data-testid="stSidebar"] div[data-testid="stRadio"] label *,
+[data-testid="stSidebar"] div[data-testid="stWidgetLabel"] *,
+[data-testid="stSidebar"] [data-testid="stSelectbox"] label * {color: #e8f1fb !important; -webkit-text-fill-color: #e8f1fb !important;}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] * {color: #adc4da !important; -webkit-text-fill-color: #adc4da !important;}
+[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {background-color: #15334e; border-radius: 7px;}
+
 [data-testid="stDataFrame"] {font-size: 0.92rem;}
 .metric-card {background:linear-gradient(180deg,#0d1b2b,#0a1827);border:1px solid #28455f;border-radius:14px;padding:14px 16px;min-height:112px}
 .metric-label{color:#93a7bd;font-size:12px;font-weight:700;text-transform:uppercase}
