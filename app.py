@@ -13,6 +13,9 @@ st.markdown("""
 <style>
 .block-container {padding-top: 1.2rem; max-width: 1700px;}
 [data-testid="stSidebar"] {background: #091522;}
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {color: #e5edf6 !important;}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {color: #a9bfd3 !important;}
+[data-testid="stSidebar"] [role="radiogroup"] p {color: #e5edf6 !important;}
 [data-testid="stDataFrame"] {font-size: 0.92rem;}
 .metric-card {background:linear-gradient(180deg,#0d1b2b,#0a1827);border:1px solid #28455f;border-radius:14px;padding:14px 16px;min-height:112px}
 .metric-label{color:#93a7bd;font-size:12px;font-weight:700;text-transform:uppercase}
