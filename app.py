@@ -784,11 +784,11 @@ elif page=="Custodia":
 
     # Navegación progresiva: custodio → cuenta → ticker; nunca cambia el patrimonio consolidado.
     accounts=sorted(rows["Cuenta"].dropna().astype(str).unique().tolist())
-    account=st.selectbox("Cuenta",["Todas las cuentas"]+accounts,key="custody_account_drill")
+    account=st.selectbox("Cuenta",["Todas las cuentas"]+accounts,key=f"custody_account_drill_{cust}")
     if account!="Todas las cuentas":
         rows=rows[rows["Cuenta"].astype(str)==account].copy()
     tickers=sorted(rows["Ticker"].dropna().astype(str).unique().tolist())
-    ticker=st.selectbox("Activo",["Todos los activos"]+tickers,key="custody_ticker_drill")
+    ticker=st.selectbox("Activo",["Todos los activos"]+tickers,key=f"custody_ticker_drill_{cust}_{account}")
     if ticker!="Todos los activos":
         rows=rows[rows["Ticker"].astype(str)==ticker].copy()
     selected_value=float(rows["Valor USD_num"].sum())
