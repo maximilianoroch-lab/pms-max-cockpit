@@ -1086,6 +1086,37 @@ elif page=="Simulador":
                     st.rerun()
 
 elif page=="Asesor IA":
+    with st.expander("Análisis técnico · 5 años, EMA y RSI", expanded=False):
+        st.caption("Indicadores diarios determinísticos sobre cierres ajustados. Fuente: Yahoo Finance (vía yfinance). Elegí el símbolo cotizado, por ejemplo AAPL o GGAL.BA; no se supone equivalencia automática con CEDEARs.")
+        symbol_default=st.session_state.get("active_ticker","") or ""
+        technical_symbol=st.text_input("Símbolo histórico",value=symbol_default,key="technical_symbol")
+        selected_window=st.radio("Ventana",["6M","1A","3A","5A"],index=3,horizontal=True,key="technical_window")
+        if st.button("Consultar precios e indicadores",key="technical_load"):
+            try:
+                from technical import fetch_history
+                with st.spinner("Consultando historial..."):
+                    st.session_state["technical_data"]=fetch_history(technical_symbol)
+                    st.session_state["technical_loaded_symbol"]=technical_symbol.upper().strip()
+            except Exception as exc:
+                st.session_state.pop("technical_data",None)
+                st.warning(f"No fue posible obtener un histórico verificable: {exc}")
+        technical_data=st.session_state.get("technical_data")
+        if technical_data is not None and not technical_data.empty:
+            st.caption(f"Símbolo consultado: {st.session_state.get('technical_loaded_symbol','')} · cierres ajustados diarios · los indicadores no son señales automáticas de compra o venta.")
+            days={"6M":183,"1A":365,"3A":1095,"5A":1827}[selected_window]
+            cut=technical_data.index.max()-pd.Timedelta(days=days)
+            shown=technical_data.loc[technical_data.index>=cut]
+            figure=px.line(shown,y=["Close","EMA 21","EMA 50","EMA 200"],labels={"value":"Precio ajustado","index":"Fecha","variable":"Serie"})
+            figure.update_layout(height=370,legend_title_text="")
+            st.plotly_chart(figure,width="stretch")
+            rsi_fig=px.line(shown,y="RSI 14",labels={"value":"RSI 14","index":"Fecha"})
+            rsi_fig.add_hline(y=70,line_dash="dash",line_color="#df9c5a")
+            rsi_fig.add_hline(y=30,line_dash="dash",line_color="#74b7aa")
+            rsi_fig.update_yaxes(range=[0,100])
+            rsi_fig.update_layout(height=190,showlegend=False)
+            st.plotly_chart(rsi_fig,width="stretch")
+            last=shown.iloc[-1]
+            st.caption(f"Cierre ajustado: {last['Close']:.2f} · Distancia EMA 200: {(last['Close']/last['EMA 200']-1)*100:+.1f}% · RSI 14: {last['RSI 14']:.1f} · {shown.index.max():%d/%m/%Y}")
     st.subheader("Asesor IA")
     st.caption("Conversación libre y análisis contextual. Comparar y Simulador también tienen páginas propias.")
     try:
