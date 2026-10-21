@@ -27,16 +27,16 @@ function leerCierreIOLSeguro_(ticker) {
   const html = r.getContentText();
   // Parse exactly the reported tabular sequence: Fecha, Apertura, Maximo, Minimo, Cierre.
   // Do not infer price denomination from magnitude.
-  const rows = html.match(/<tr\\b[\\s\\S]*?<\\/tr>/gi)||[];
+  const rows = html.match(/<tr\b[\s\S]*?<\/tr>/gi)||[];
   let best=null;
   for(const tr of rows) {
-    const t=tr.replace(/<script\\b[\\s\\S]*?<\\/script>/gi,' ').replace(/<style\\b[\\s\\S]*?<\\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/gi,' ').replace(/\\s+/g,' ').trim();
-    const m=t.match(/\\b(\\d{2})\\/(\\d{2})\\/(\\d{4})\\b/);
+    const t=tr.replace(/<script\b[\s\S]*?<\/script>/gi,' ').replace(/<style\b[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/gi,' ').replace(/\s+/g,' ').trim();
+    const m=t.match(/\b(\d{2})\/(\d{2})\/(\d{4})\b/);
     if(!m)continue;
     const year=+m[3],month=+m[1],day=+m[2];
     const d=new Date(year,month-1,day);
     if(d.getFullYear()!==year||d.getMonth()!==month-1||d.getDate()!==day)continue;
-    const cols=(t.slice(t.indexOf(m[0])+m[0].length).match(/-?\\d[\\d,.]*/g)||[]);
+    const cols=(t.slice(t.indexOf(m[0])+m[0].length).match(/-?\d[\d,.]*/g)||[]);
     if(cols.length<7)continue; // OHLC + adjusted close + volumes
     const parse=x=>Number(x.replace(/,/g,''));
     const [open,high,low,close,adjusted]=cols.slice(0,5).map(parse);
