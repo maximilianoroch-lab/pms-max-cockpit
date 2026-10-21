@@ -151,14 +151,18 @@ def pct_points(series):
         return series
 
 def table_money(df, columns=("Valor USD_num", "Valor total USD_num", "Cambio USD")):
-    """Formato monetario con miles, sin decimales; mantiene valores numéricos para cálculos."""
-    cols=[c for c in columns if c in df.columns]
-    return df.style.format({c:fmt_usd for c in cols}) if cols else df
+    """Prepara copia de presentación: el origen conserva números para cálculos y selección."""
+    show=df.copy()
+    for col in columns:
+        if col in show.columns:
+            show[col]=show[col].map(lambda v:fmt_usd(v) if pd.notna(v) else "—")
+    return show
 
 def colored_variation(df, column="Variación_num"):
     """Resalta variaciones con colores, conservando números para ordenar/seleccionar."""
-    if column not in df.columns:
-        return table_money(df)
+    show=table_money(df)
+    if column not in show.columns:
+        return show
     def color(v):
         try:
             x=float(v)
@@ -166,9 +170,7 @@ def colored_variation(df, column="Variación_num"):
             return "color: #43d59c; font-weight: 700" if x>0 else ("color: #ff7070; font-weight: 700" if x<0 else "color: #9aacc0")
         except (TypeError,ValueError):
             return ""
-    style=df.style.map(color,subset=[column])
-    cols=[c for c in ("Valor USD_num","Valor total USD_num","Cambio USD") if c in df.columns]
-    return style.format({c:fmt_usd for c in cols}) if cols else style
+    return show.style.map(color,subset=[column])
 
 def local_num(v):
     s=str(v).replace("$","").replace("%","").strip()
@@ -273,7 +275,7 @@ def top_positions_table(limit=12):
         colored_variation(top_show),
         hide_index=True,width='stretch',on_select="rerun",selection_mode="single-row",key=f"top_positions_{limit}",
         column_config={
-            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Valor USD_num":st.column_config.TextColumn("Valor USD"),
             "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
             "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
             "Estado dato":st.column_config.TextColumn("Estado"),
@@ -541,7 +543,7 @@ if page=="Resumen":
             colored_variation(m_show),
             hide_index=True,width='stretch',
             column_config={
-                "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+                "Valor USD_num":st.column_config.TextColumn("Valor USD"),
                 "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
                 "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
                 "Nombre":st.column_config.TextColumn("Nombre",width="medium"),
@@ -605,7 +607,7 @@ elif page=="Diversificación":
             detail_show,
             hide_index=True,width='stretch',
             column_config={
-                "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+                "Valor USD_num":st.column_config.TextColumn("Valor USD"),
                 "Peso cartera_num":st.column_config.NumberColumn("Peso cartera",format="%.1f%%"),
             }
         )
@@ -722,7 +724,7 @@ elif page=="Evolución":
     st.dataframe(
         colored_variation(evo_show),hide_index=True,width='stretch',
         column_config={
-            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Valor USD_num":st.column_config.TextColumn("Valor USD"),
             "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
             "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
         }
@@ -884,7 +886,7 @@ elif page=="Custodia":
     st.dataframe(
         table_money(rows_show),hide_index=True,width='stretch',
         column_config={
-            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Valor USD_num":st.column_config.TextColumn("Valor USD"),
             "Cantidad_num":st.column_config.TextColumn("Unidades"),
             "Peso custodio_num":st.column_config.NumberColumn("Peso custodio",format="%.1f%%"),
         }
@@ -934,7 +936,7 @@ elif page=="Posiciones":
         hide_index=True,width='stretch',height=700,
         on_select="rerun",selection_mode="single-row",key="positions_table",
         column_config={
-            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Valor USD_num":st.column_config.TextColumn("Valor USD"),
             "Cantidad_num":st.column_config.TextColumn("Unidades"),
             "Peso cartera_num":st.column_config.NumberColumn("Peso",format="%.2f%%"),
             "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
