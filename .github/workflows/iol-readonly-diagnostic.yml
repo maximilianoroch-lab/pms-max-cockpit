@@ -1,5 +1,10 @@
 name: IOL public bond diagnostics (read-only)
 on:
+  pull_request:
+    paths:
+      - 'ops/iol_probe.py'
+      - 'ops/test_iol_probe.py'
+      - '.github/workflows/iol-readonly-diagnostic.yml'
   workflow_dispatch:
   schedule:
     - cron: '30 21 * * 1-5'
