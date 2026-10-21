@@ -520,14 +520,40 @@ if page=="Resumen":
 
     c1,c2=st.columns([0.8,1.2])
     with c1:
-        st.subheader("Composición por clase")
-        df=data["dashboard_diversificacion_v2"].copy()
-        df=df[(df["Clase inversión"]!="Total")&df["Clase inversión"].notna()]
-        # En barras horizontales, ordenar ascendente en los datos deja el mayor arriba.
-        df=df.sort_values("Valor USD_num",ascending=True)
-        fig=px.bar(df,x="Valor USD_num",y="Clase inversión",orientation="h",hover_data={"Peso_num":":.1%"},labels={"Valor USD_num":"Valor USD","Clase inversión":"Clase"})
-        fig.update_layout(height=300,margin=dict(l=10,r=10,t=10,b=10))
-        st.plotly_chart(fig,width='stretch')
+        st.subheader("Composición por tipo")
+        source=data["app_feed_v2"].copy()
+        if not source.empty and {"Ticker","Tipo","Valor USD_num"}.issubset(source.columns):
+            source=source[source["Ticker"].notna()].copy()
+            # Criterio económico: fondos y oro clasificados como ETF; FUT suma en Cripto.
+            kinds=source["Tipo"].fillna("").astype(str).str.strip().str.lower()
+            tickers=source["Ticker"].fillna("").astype(str).str.upper()
+            classes=source["Clase"].fillna("").astype(str).str.lower() if "Clase" in source else pd.Series("",index=source.index)
+            source["Grupo"]=kinds.map({
+                "cedear":"Cedear","acción ar":"Acción AR","accion ar":"Acción AR",
+                "etf":"ETF","bono ar":"Soberanos","cripto":"Cripto","derivado":"Cripto"
+            })
+            source.loc[tickers.eq("FUT"),"Grupo"]="Cripto"
+            source.loc[kinds.str.contains("fondo|fci|mutual",regex=True)|classes.eq("oro"),"Grupo"]="ETF"
+            order=["Cedear","Acción AR","ETF","Cripto","Soberanos"]
+            unknown=source.loc[source["Grupo"].isna() & ~tickers.eq("CASH")]
+            if not unknown.empty:
+                st.caption("Existen activos sin tipo clasificado; revisar su clasificación.")
+            chart=source[source["Grupo"].isin(order)].groupby("Grupo",as_index=False)["Valor USD_num"].sum()
+            total=float(source["Valor USD_num"].sum())
+            chart["Peso"]=chart["Valor USD_num"]/total*100 if total else 0
+            chart["Etiqueta"]=chart["Peso"].map(lambda x:f"{x:.0f}%")
+            chart=chart.sort_values("Peso",ascending=True)
+            fig=px.bar(chart,x="Peso",y="Grupo",orientation="h",text="Etiqueta",
+                       category_orders={"Grupo":order[::-1]},
+                       labels={"Peso":"% del patrimonio","Grupo":""},
+                       color_discrete_sequence=["#86b6e8"])
+            fig.update_traces(textposition="outside",cliponaxis=False)
+            fig.update_layout(height=300,margin=dict(l=10,r=30,t=10,b=10),showlegend=False,
+                              xaxis_ticksuffix="%",yaxis_title=None)
+            st.plotly_chart(fig,width='stretch')
+            st.caption("Peso sobre patrimonio total; el efectivo se incluye en el total, pero no se grafica.")
+        else:
+            st.info("No hay información para la composición por tipo.")
     with c2:
         st.subheader("Mayores movimientos")
         app=data["app_feed_v2"].copy()
