@@ -676,6 +676,27 @@ elif page=="Diversificación":
             st.caption("No hay ETFs directos para mostrar.")
 
 elif page=="Evolución":
+    snaps=data.get("snapshot_series_v2",pd.DataFrame()).copy()
+    if not snaps.empty and "Valor total USD_num" in snaps.columns:
+        snaps["Fecha orden"]=pd.to_datetime(snaps["Fecha"],dayfirst=True,errors="coerce",format="mixed")
+        snaps=snaps.dropna(subset=["Fecha orden"]).sort_values("Fecha orden").drop_duplicates(subset=["Fecha orden"],keep="last")
+        snaps=snaps.loc[snaps["Valor total USD_num"]>0].copy()
+        if PORTFOLIO["id"]=="demo_pms_max":
+            snaps["Valor total USD_num"]=snaps["Valor total USD_num"]*4
+        snaps["Cambio USD"]=snaps["Valor total USD_num"].diff()
+        snaps["Cambio %"]=snaps["Valor total USD_num"].pct_change()*100
+        if len(snaps)>1:
+            latest=snaps.iloc[-1]; prev=snaps.iloc[-2]
+            st.subheader("Cambio entre snapshots")
+            x,y,z=st.columns(3)
+            x.metric("Último patrimonio",fmt_usd(latest["Valor total USD_num"]))
+            y.metric("Cambio USD",fmt_usd(latest["Cambio USD"]))
+            z.metric("Cambio %",f'{latest["Cambio %"]:+.2f}%'.replace(".",","))
+            st.caption(f'Del {prev["Fecha orden"].strftime("%d/%m/%Y")} al {latest["Fecha orden"].strftime("%d/%m/%Y")} · variación patrimonial sin ajustar por aportes/retiros; no es rentabilidad.')
+        st.dataframe(snaps[["Fecha","Valor total USD_num","Cambio USD","Cambio %"]].tail(20).sort_values("Fecha",ascending=False),hide_index=True,width="stretch",
+            column_config={"Valor total USD_num":st.column_config.NumberColumn("Patrimonio USD",format="US$ %.0f"),
+                           "Cambio USD":st.column_config.NumberColumn("Cambio USD",format="US$ %.2f"),
+                           "Cambio %":st.column_config.NumberColumn("Cambio %",format="%.2f%%")})
     evo=data["dashboard_evolucion_v2"].copy()
     hist=evo[evo["Valor total USD_num"].gt(0)].copy()
     fig=px.line(hist,x="Fecha",y="Valor total USD_num",markers=True,labels={"Valor total USD_num":"Patrimonio USD"})
