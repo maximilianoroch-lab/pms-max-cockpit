@@ -150,10 +150,19 @@ def pct_points(series):
     except:
         return series
 
+def table_money(df, columns=("Valor USD_num", "Valor total USD_num", "Cambio USD")):
+    """Prepara copia de presentación: el origen conserva números para cálculos y selección."""
+    show=df.copy()
+    for col in columns:
+        if col in show.columns:
+            show[col]=show[col].map(lambda v:fmt_usd(v) if pd.notna(v) else "—")
+    return show
+
 def colored_variation(df, column="Variación_num"):
     """Resalta variaciones con colores, conservando números para ordenar/seleccionar."""
-    if column not in df.columns:
-        return df
+    show=table_money(df)
+    if column not in show.columns:
+        return show
     def color(v):
         try:
             x=float(v)
@@ -161,7 +170,7 @@ def colored_variation(df, column="Variación_num"):
             return "color: #43d59c; font-weight: 700" if x>0 else ("color: #ff7070; font-weight: 700" if x<0 else "color: #9aacc0")
         except (TypeError,ValueError):
             return ""
-    return df.style.map(color,subset=[column])
+    return show.style.map(color,subset=[column])
 
 def local_num(v):
     s=str(v).replace("$","").replace("%","").strip()
@@ -266,7 +275,7 @@ def top_positions_table(limit=12):
         colored_variation(top_show),
         hide_index=True,width='stretch',on_select="rerun",selection_mode="single-row",key=f"top_positions_{limit}",
         column_config={
-            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Valor USD_num":st.column_config.TextColumn("Valor USD"),
             "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
             "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
             "Estado dato":st.column_config.TextColumn("Estado"),
@@ -285,7 +294,9 @@ def render_active_context():
         return
     st.markdown("#### Contexto activo")
     c1,c2,c3,c4=st.columns(4)
-    c1.metric(snap["Ticker"],snap["Nombre"])
+    with c1:
+        st.caption(snap["Ticker"])
+        st.markdown(f'<div style="font-size:clamp(1.05rem,1.45vw,1.45rem);line-height:1.35;overflow-wrap:anywhere;white-space:normal">{__import__("html").escape(str(snap["Nombre"]))}</div>',unsafe_allow_html=True)
     c2.metric("Valor en cartera",fmt_usd(snap["Valor USD"]))
     c3.metric("Peso",fmt_pct(snap["Peso"]))
     c4.metric("Variación",fmt_pct(snap["Variación"]),delta=None)
@@ -428,15 +439,17 @@ def render_company_comparison(result):
         key=comparison_metric_key(name)
         winner="Sin ventaja clara"
         comparable=m.get("comparable",True) is not False
-        if not comparable:
-            winner="No comparable"
-        elif va is not None and vb is not None and key:
+        if va is not None and vb is not None and key:
             denom=max(abs(va),abs(vb),1e-9)
             if abs(va-vb)/denom>=0.01:
                 if key in LOWER_BETTER and va>0 and vb>0:
                     winner=a if va<vb else b
                 elif key in HIGHER_BETTER:
                     winner=a if va>vb else b
+        if not comparable and winner not in ("Sin ventaja clara","No comparable"):
+            winner += " (orientativo)"
+        elif not comparable:
+            winner="No comparable: criterios distintos"
         unit=m.get("unit","")
         def fmt(v):
             if v is None:return "No disponible"
@@ -530,7 +543,7 @@ if page=="Resumen":
             colored_variation(m_show),
             hide_index=True,width='stretch',
             column_config={
-                "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+                "Valor USD_num":st.column_config.TextColumn("Valor USD"),
                 "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
                 "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
                 "Nombre":st.column_config.TextColumn("Nombre",width="medium"),
@@ -546,7 +559,7 @@ if page=="Resumen":
     diff=look_total-app_total
 
     st.subheader("Principales posiciones")
-    st.caption("Seleccioná una fila para convertir ese activo en el ticker activo.")
+    st.caption("Seleccionar una fila lleva ese ticker al Asesor IA y a Comparar. No modifica ni filtra la cartera.")
     top_positions_table(12)
 
 elif page=="Diversificación":
@@ -594,7 +607,7 @@ elif page=="Diversificación":
             detail_show,
             hide_index=True,width='stretch',
             column_config={
-                "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+                "Valor USD_num":st.column_config.TextColumn("Valor USD"),
                 "Peso cartera_num":st.column_config.NumberColumn("Peso cartera",format="%.1f%%"),
             }
         )
@@ -681,8 +694,6 @@ elif page=="Evolución":
         snaps["Fecha orden"]=pd.to_datetime(snaps["Fecha"],dayfirst=True,errors="coerce",format="mixed")
         snaps=snaps.dropna(subset=["Fecha orden"]).sort_values("Fecha orden").drop_duplicates(subset=["Fecha orden"],keep="last")
         snaps=snaps.loc[snaps["Valor total USD_num"]>0].copy()
-        if PORTFOLIO["id"]=="demo_pms_max":
-            snaps["Valor total USD_num"]=snaps["Valor total USD_num"]*4
         snaps["Cambio USD"]=snaps["Valor total USD_num"].diff()
         snaps["Cambio %"]=snaps["Valor total USD_num"].pct_change()*100
         if len(snaps)>1:
@@ -693,10 +704,11 @@ elif page=="Evolución":
             y.metric("Cambio USD",fmt_usd(latest["Cambio USD"]))
             z.metric("Cambio %",f'{latest["Cambio %"]:+.2f}%'.replace(".",","))
             st.caption(f'Del {prev["Fecha orden"].strftime("%d/%m/%Y")} al {latest["Fecha orden"].strftime("%d/%m/%Y")} · variación patrimonial sin ajustar por aportes/retiros; no es rentabilidad.')
-        st.dataframe(snaps[["Fecha","Valor total USD_num","Cambio USD","Cambio %"]].tail(20).sort_values("Fecha",ascending=False),hide_index=True,width="stretch",
-            column_config={"Valor total USD_num":st.column_config.NumberColumn("Patrimonio USD",format="US$ %.0f"),
-                           "Cambio USD":st.column_config.NumberColumn("Cambio USD",format="US$ %.2f"),
-                           "Cambio %":st.column_config.NumberColumn("Cambio %",format="%.2f%%")})
+        snap_show=snaps[["Fecha","Fecha orden","Valor total USD_num","Cambio USD","Cambio %"]].tail(20).sort_values("Fecha orden",ascending=False).copy()
+        snap_show["Patrimonio USD"]=snap_show["Valor total USD_num"].map(fmt_usd)
+        snap_show["Cambio USD"]=snap_show["Cambio USD"].map(lambda v: fmt_usd(v) if pd.notna(v) else "—")
+        snap_show["Cambio %"]=snap_show["Cambio %"].map(lambda v: f"{v:+.2f}%".replace(".",",") if pd.notna(v) else "—")
+        st.dataframe(snap_show[["Fecha","Patrimonio USD","Cambio USD","Cambio %"]],hide_index=True,width="stretch")
     evo=data["dashboard_evolucion_v2"].copy()
     hist=evo[evo["Valor total USD_num"].gt(0)].copy()
     fig=px.line(hist,x="Fecha",y="Valor total USD_num",markers=True,labels={"Valor total USD_num":"Patrimonio USD"})
@@ -712,7 +724,7 @@ elif page=="Evolución":
     st.dataframe(
         colored_variation(evo_show),hide_index=True,width='stretch',
         column_config={
-            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Valor USD_num":st.column_config.TextColumn("Valor USD"),
             "Peso_num":st.column_config.NumberColumn("Peso",format="%.1f%%"),
             "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
         }
@@ -767,18 +779,11 @@ elif page=="Riesgo":
     top_positions_table(15)
 
 elif page=="Custodia":
-    cash_df=data.get("custodia_cash_v2",pd.DataFrame()).copy()
-    if not cash_df.empty and {"Cuenta","Custodio","Moneda","Saldo nativo","Estado"}.issubset(cash_df.columns):
-        cash_df=cash_df[(cash_df["Estado"].astype(str).str.upper()=="AUDITADO") & cash_df["Cuenta"].notna()]
-        st.caption("Efectivo por cuenta y moneda · valores correspondientes al último corte registrado.")
-        if not cash_df.empty:
-            st.dataframe(cash_df[[c for c in ["Fecha corte","Cuenta","Custodio","Moneda","Saldo nativo","Valor USD al corte","Valor USD referencial actual"] if c in cash_df.columns]],hide_index=True,use_container_width=True)
-        else:
-            st.caption("Sin saldos de efectivo disponibles.")
-    else:
-        st.caption("Sin saldos de efectivo disponibles.")
+    cash_df=data.get("custodia_cash_v2",pd.DataFrame()).copy()  # Sólo conciliación interna, no mostrar efectivo.
     summ=data["app_custodia_resumen_v2"].copy()
     detail=data["app_custodia_detalle_v2"].copy()
+    # Control interno de conciliación. Vista visible: únicamente títulos y otros activos invertidos.
+    detail_visible=detail[detail["Ticker"].astype(str).str.upper()!="CASH"].copy()
     # Control de integridad de solo lectura: nunca incorpora CASH como activo adicional.
     position_total=float(data["app_feed_v2"]["Valor USD_num"].sum())
     custody_total=float(summ["Valor USD_num"].sum())
@@ -799,26 +804,27 @@ elif page=="Custodia":
     # Controles internos; sin exponer umbrales ni auditorias en el dashboard.
     st.session_state["_custody_integrity_ok"]=bool(abs(difference)<=max(0.10,position_total*0.000001) and position_count==cust_count and ticker_issues.empty)
     st.session_state["_cash_integrity_ok"]=bool(cash_cut>0 and cash_gap<=0.02)
-    cust_options=["TODOS"]+summ["Custodio"].dropna().astype(str).tolist()
+    cust_options=["TODOS"]+sorted(detail_visible["Custodio"].dropna().astype(str).unique().tolist())
     cust=st.selectbox("Custodio",cust_options,index=0)
 
     if cust=="TODOS":
         st.session_state["analysis_context"]={"dimension":"","value":""}
-        total_val=float(summ["Valor USD_num"].sum()) if "Valor USD_num" in summ.columns else float(detail["Valor USD_num"].sum())
-        total_accounts=int(summ["Cantidad cuentas_num"].sum()) if "Cantidad cuentas_num" in summ.columns else int(detail["Cuenta"].nunique())
+        total_val=float(detail_visible["Valor USD_num"].sum())
+        total_accounts=int(detail_visible["Cuenta"].nunique())
         a,b,c=st.columns(3)
         a.metric("Valor",fmt_usd(total_val))
-        b.metric("Peso cartera","100,0%")
+        b.metric("Peso cartera",fmt_pct(total_val/position_total if position_total else 0))
         c.metric("Cuentas",total_accounts)
-        rows=detail.copy().sort_values("Valor USD_num",ascending=False)
+        rows=detail_visible.copy().sort_values("Valor USD_num",ascending=False)
     else:
         st.session_state["analysis_context"]={"dimension":"Custodio","value":cust}
-        s=summ[summ["Custodio"]==cust].iloc[0]
+        s=detail_visible[detail_visible["Custodio"]==cust]
+        cust_value=float(s["Valor USD_num"].sum())
         a,b,c=st.columns(3)
-        a.metric("Valor",fmt_usd(s["Valor USD_num"]))
-        b.metric("Peso cartera",fmt_pct(s["Peso cartera_num"]))
-        c.metric("Cuentas",int(s["Cantidad cuentas_num"]))
-        rows=detail[detail["Custodio"]==cust].copy().sort_values("Valor USD_num",ascending=False)
+        a.metric("Valor",fmt_usd(cust_value))
+        b.metric("Peso cartera",fmt_pct(cust_value/position_total if position_total else 0))
+        c.metric("Cuentas",int(s["Cuenta"].nunique()))
+        rows=s.copy().sort_values("Valor USD_num",ascending=False)
 
     # Navegación progresiva: custodio → cuenta → ticker; nunca cambia el patrimonio consolidado.
     accounts=sorted(rows["Cuenta"].dropna().astype(str).unique().tolist())
@@ -874,12 +880,14 @@ elif page=="Custodia":
                 labels={"Valor USD_num":"Valor USD"}
             )
             st.plotly_chart(fig,width='stretch')
-    rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Valor USD_num","Peso custodio_num"]].copy()
+    rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Cantidad_num","Valor USD_num","Peso custodio_num"]].copy()
+    rows_show["Cantidad_num"]=rows_show["Cantidad_num"].map(lambda x:fmt_num(x,0) if float(x).is_integer() else fmt_num(x,4))
     rows_show["Peso custodio_num"]=pct_points(rows_show["Peso custodio_num"])
     st.dataframe(
-        rows_show,hide_index=True,width='stretch',
+        table_money(rows_show),hide_index=True,width='stretch',
         column_config={
-            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Valor USD_num":st.column_config.TextColumn("Valor USD"),
+            "Cantidad_num":st.column_config.TextColumn("Unidades"),
             "Peso custodio_num":st.column_config.NumberColumn("Peso custodio",format="%.1f%%"),
         }
     )
@@ -909,7 +917,8 @@ elif page=="Posiciones":
         agg=view.groupby("Ticker",as_index=False).agg({
             "Nombre":"first","Tipo":"first","Valor USD_num":"sum",
             "Variación_num":"first","Estado dato":"first",
-            "Cuenta":lambda s:", ".join(sorted(set(str(x) for x in s if pd.notna(x))))
+            "Cuenta":lambda s:", ".join(sorted(set(str(x) for x in s if pd.notna(x)))),
+            "Cantidad_num":"sum"
         })
         total_base=float(data.get("app_feed_v2",pd.DataFrame()).get("Valor USD_num",pd.Series(dtype=float)).sum())
         agg["Peso cartera_num"]=agg["Valor USD_num"]/total_base if total_base else 0.0
@@ -918,7 +927,8 @@ elif page=="Posiciones":
         view=view.sort_values("Valor USD_num",ascending=False)
 
     st.caption(f"{len(view)} filas · {fmt_usd(view['Valor USD_num'].sum())}")
-    view_show=view[["Ticker","Nombre","Cuenta","Tipo","Valor USD_num","Peso cartera_num","Variación_num","Estado dato"]].copy()
+    view_show=view[["Ticker","Nombre","Cuenta","Tipo","Cantidad_num","Valor USD_num","Peso cartera_num","Variación_num","Estado dato"]].copy()
+    view_show["Cantidad_num"]=view_show["Cantidad_num"].map(lambda x:fmt_num(x,0) if float(x).is_integer() else fmt_num(x,4))
     view_show["Peso cartera_num"]=pct_points(view_show["Peso cartera_num"])
     view_show["Variación_num"]=pct_points(view_show["Variación_num"])
     pos_event=st.dataframe(
@@ -926,7 +936,8 @@ elif page=="Posiciones":
         hide_index=True,width='stretch',height=700,
         on_select="rerun",selection_mode="single-row",key="positions_table",
         column_config={
-            "Valor USD_num":st.column_config.NumberColumn("Valor USD",format="US$ %.0f"),
+            "Valor USD_num":st.column_config.TextColumn("Valor USD"),
+            "Cantidad_num":st.column_config.TextColumn("Unidades"),
             "Peso cartera_num":st.column_config.NumberColumn("Peso",format="%.2f%%"),
             "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
             "Estado dato":st.column_config.TextColumn("Estado"),
