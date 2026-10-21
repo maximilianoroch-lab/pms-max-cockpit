@@ -78,7 +78,7 @@ with st.sidebar:
     st.markdown("### Herramientas")
     tool_page=st.radio(
         "Herramientas",
-        ["—","Comparador","Simulador"],
+        ["—","Comparar","Simulador"],
         label_visibility="collapsed",
         key="tools_nav"
     )
@@ -922,8 +922,8 @@ elif page=="Posiciones":
         pass
 
 
-elif page=="Comparador":
-    st.subheader("Comparador de empresas")
+elif page=="Comparar":
+    st.subheader("Comparar de empresas")
     st.caption("Herramienta analítica independiente del chat. Usa datos externos actuales y contexto de PMS Max.")
     render_active_context()
 
@@ -1029,7 +1029,7 @@ elif page=="Simulador":
 
 elif page=="Asesor IA":
     st.subheader("Asesor IA")
-    st.caption("Conversación libre y análisis contextual. Comparador y Simulador también tienen páginas propias.")
+    st.caption("Conversación libre y análisis contextual. Comparar y Simulador también tienen páginas propias.")
     try:
         advisor_ready=bool(st.secrets.get("OPENAI_API_KEY",""))
         advisor_model=st.secrets.get("OPENAI_MODEL","gpt-5.6")
