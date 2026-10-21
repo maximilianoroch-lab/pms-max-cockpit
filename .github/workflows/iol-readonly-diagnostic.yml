@@ -1,0 +1,26 @@
+name: IOL public bond diagnostics (read-only)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 21 * * 1-5'
+permissions:
+  contents: read
+jobs:
+  check-iol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify parser
+        run: python -m unittest discover -s ops -p 'test_iol_probe.py' -v
+      - name: Probe public historical pages; no Google access
+        run: python ops/iol_probe.py --output iol_quotes_diagnostic.json
+      - name: Retain raw diagnostic only
+        uses: actions/upload-artifact@v4
+        with:
+          name: iol-quote-diagnostic
+          path: iol_quotes_diagnostic.json
+          retention-days: 7
