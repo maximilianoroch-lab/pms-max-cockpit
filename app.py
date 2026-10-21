@@ -13,6 +13,23 @@ st.markdown("""
 <style>
 .block-container {padding-top: 1.2rem; max-width: 1700px;}
 [data-testid="stSidebar"] {background: #091522;}
+[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {color: #e5edf6 !important;}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {color: #a9bfd3 !important;}
+[data-testid="stSidebar"] [role="radiogroup"] p {color: #e5edf6 !important;}
+/* Sidebar dark palette: readable text across Streamlit widget internals. */
+[data-testid="stSidebar"] {color: #e8f1fb !important; color-scheme: dark;}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] *,
+[data-testid="stSidebar"] [data-testid="stText"],
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] *,
+[data-testid="stSidebar"] div[data-testid="stRadio"] label,
+[data-testid="stSidebar"] div[data-testid="stRadio"] label *,
+[data-testid="stSidebar"] div[data-testid="stWidgetLabel"] *,
+[data-testid="stSidebar"] [data-testid="stSelectbox"] label * {color: #e8f1fb !important; -webkit-text-fill-color: #e8f1fb !important;}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] * {color: #adc4da !important; -webkit-text-fill-color: #adc4da !important;}
+[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {background-color: #15334e; border-radius: 7px;}
+
 [data-testid="stDataFrame"] {font-size: 0.92rem;}
 .metric-card {background:linear-gradient(180deg,#0d1b2b,#0a1827);border:1px solid #28455f;border-radius:14px;padding:14px 16px;min-height:112px}
 .metric-label{color:#93a7bd;font-size:12px;font-weight:700;text-transform:uppercase}
@@ -61,7 +78,7 @@ with st.sidebar:
     st.markdown("### Herramientas")
     tool_page=st.radio(
         "Herramientas",
-        ["—","Comparador","Simulador"],
+        ["—","Comparar","Simulador"],
         label_visibility="collapsed",
         key="tools_nav"
     )
@@ -521,22 +538,12 @@ if page=="Resumen":
             }
         )
 
-    with st.expander("Control de consistencia"):
-        app_df=data.get("app_feed_v2",pd.DataFrame())
-        look_df=data.get("looker_feed_v2",pd.DataFrame())
-        app_total=float(app_df["Valor USD_num"].sum()) if not app_df.empty and "Valor USD_num" in app_df.columns else 0.0
-        look_total=float(look_df["Valor USD_num"].sum()) if not look_df.empty and "Valor USD_num" in look_df.columns else 0.0
-        home_total=float(summary.get("home_total",0) or 0)
-        diff=look_total-app_total
-        q1,q2,q3,q4=st.columns(4)
-        q1.metric("HOME",fmt_usd(home_total))
-        q2.metric("App feed",fmt_usd(app_total))
-        q3.metric("Detalle cuentas",fmt_usd(look_total))
-        q4.metric("Detalle - app",fmt_usd(diff))
-        if abs(diff)<=1 and summary.get("reconciled",False):
-            st.success("Reconciliación de feeds: OK")
-        else:
-            st.warning("Hay una diferencia transitoria entre feeds. Se prioriza el detalle consolidado y se bloquean deltas inconsistentes.")
+    app_df=data.get("app_feed_v2",pd.DataFrame())
+    look_df=data.get("looker_feed_v2",pd.DataFrame())
+    app_total=float(app_df["Valor USD_num"].sum()) if not app_df.empty and "Valor USD_num" in app_df.columns else 0.0
+    look_total=float(look_df["Valor USD_num"].sum()) if not look_df.empty and "Valor USD_num" in look_df.columns else 0.0
+    home_total=float(summary.get("home_total",0) or 0)
+    diff=look_total-app_total
 
     st.subheader("Principales posiciones")
     st.caption("Seleccioná una fila para convertir ese activo en el ticker activo.")
@@ -739,8 +746,38 @@ elif page=="Riesgo":
     top_positions_table(15)
 
 elif page=="Custodia":
+    cash_df=data.get("custodia_cash_v2",pd.DataFrame()).copy()
+    if not cash_df.empty and {"Cuenta","Custodio","Moneda","Saldo nativo","Estado"}.issubset(cash_df.columns):
+        cash_df=cash_df[(cash_df["Estado"].astype(str).str.upper()=="AUDITADO") & cash_df["Cuenta"].notna()]
+        st.caption("Efectivo por cuenta y moneda · valores correspondientes al último corte registrado.")
+        if not cash_df.empty:
+            st.dataframe(cash_df[[c for c in ["Fecha corte","Cuenta","Custodio","Moneda","Saldo nativo","Valor USD al corte","Valor USD referencial actual"] if c in cash_df.columns]],hide_index=True,use_container_width=True)
+        else:
+            st.caption("Sin saldos de efectivo disponibles.")
+    else:
+        st.caption("Sin saldos de efectivo disponibles.")
     summ=data["app_custodia_resumen_v2"].copy()
     detail=data["app_custodia_detalle_v2"].copy()
+    # Control de integridad de solo lectura: nunca incorpora CASH como activo adicional.
+    position_total=float(data["app_feed_v2"]["Valor USD_num"].sum())
+    custody_total=float(summ["Valor USD_num"].sum())
+    difference=position_total-custody_total
+    # Diferencias de pocos centavos son esperables por redondeo de custodia.
+    position_count=len(data["app_feed_v2"].dropna(subset=["Ticker"]))
+    cust_count=detail["Ticker"].dropna().astype(str).nunique()
+    # Conciliación por ticker: detecta diferencias compensadas que un total global ocultaría.
+    by_position=data["app_feed_v2"].dropna(subset=["Ticker"]).groupby("Ticker")["Valor USD_num"].sum()
+    by_custody=detail.dropna(subset=["Ticker"]).groupby("Ticker")["Valor USD_num"].sum()
+    ticker_delta=by_position.sub(by_custody,fill_value=0.0)
+    ticker_issues=ticker_delta[ticker_delta.abs()>0.10]
+    cash_position=float(data["app_feed_v2"].loc[data["app_feed_v2"]["Ticker"].astype(str).str.upper()=="CASH","Valor USD_num"].sum())
+    cash_cut=0.0
+    if not cash_df.empty and "Valor USD al corte" in cash_df.columns:
+        cash_cut=sum(local_num(v) for v in cash_df["Valor USD al corte"] if pd.notna(v)) * 1
+    cash_gap=abs(cash_position-cash_cut)/cash_cut if cash_cut>0 else float("inf")
+    # Controles internos; sin exponer umbrales ni auditorias en el dashboard.
+    st.session_state["_custody_integrity_ok"]=bool(abs(difference)<=max(0.10,position_total*0.000001) and position_count==cust_count and ticker_issues.empty)
+    st.session_state["_cash_integrity_ok"]=bool(cash_cut>0 and cash_gap<=0.02)
     cust_options=["TODOS"]+summ["Custodio"].dropna().astype(str).tolist()
     cust=st.selectbox("Custodio",cust_options,index=0)
 
@@ -762,11 +799,29 @@ elif page=="Custodia":
         c.metric("Cuentas",int(s["Cantidad cuentas_num"]))
         rows=detail[detail["Custodio"]==cust].copy().sort_values("Valor USD_num",ascending=False)
 
+    # Navegación progresiva: custodio → cuenta → ticker; nunca cambia el patrimonio consolidado.
+    accounts=sorted(rows["Cuenta"].dropna().astype(str).unique().tolist())
+    account=st.selectbox("Cuenta",["Todas las cuentas"]+accounts,key=f"custody_account_drill_{cust}")
+    if account!="Todas las cuentas":
+        rows=rows[rows["Cuenta"].astype(str)==account].copy()
+    tickers=sorted(rows["Ticker"].dropna().astype(str).unique().tolist())
+    ticker=st.selectbox("Activo",["Todos los activos"]+tickers,key=f"custody_ticker_drill_{cust}_{account}")
+    if ticker!="Todos los activos":
+        rows=rows[rows["Ticker"].astype(str)==ticker].copy()
+    selected_value=float(rows["Valor USD_num"].sum())
+    selected_weight=selected_value/position_total if position_total else 0.0
+    st.caption("Detalle filtrado (sin modificar el patrimonio global)")
+    v1,v2,v3=st.columns(3)
+    v1.metric("Valor seleccionado",fmt_usd(selected_value))
+    v2.metric("Peso en cartera",fmt_pct(selected_weight))
+    v3.metric("Registros",len(rows))
+    if rows.empty:
+        st.info("No hay posiciones con estos filtros.")
     if cust=="TODOS":
         st.subheader("Distribución por custodio")
         # Agrupar por custodio y cuenta: barra apilada. Sólo Criteria se
         # desglosa visualmente por cuenta; los demás quedan como una barra.
-        chart_data=detail.dropna(subset=["Custodio"]).copy()
+        chart_data=rows.dropna(subset=["Custodio"]).copy()
         chart_data["Custodio"]=chart_data["Custodio"].astype(str)
         chart_data["Cuenta"]=chart_data["Cuenta"].fillna("Sin cuenta").astype(str)
         chart_data["Grupo"]=chart_data.apply(
@@ -790,11 +845,14 @@ elif page=="Custodia":
     else:
         st.subheader(f"Principales posiciones · {cust}")
         chart_rows=rows.head(15).sort_values("Valor USD_num",ascending=True)
-        fig=px.bar(
-            chart_rows,x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
-            labels={"Valor USD_num":"Valor USD"}
-        )
-        st.plotly_chart(fig,width='stretch')
+        if chart_rows.empty:
+            st.info("Sin activos para mostrar con estos filtros.")
+        else:
+            fig=px.bar(
+                chart_rows,x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
+                labels={"Valor USD_num":"Valor USD"}
+            )
+            st.plotly_chart(fig,width='stretch')
     rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Valor USD_num","Peso custodio_num"]].copy()
     rows_show["Peso custodio_num"]=pct_points(rows_show["Peso custodio_num"])
     st.dataframe(
@@ -864,8 +922,8 @@ elif page=="Posiciones":
         pass
 
 
-elif page=="Comparador":
-    st.subheader("Comparador de empresas")
+elif page=="Comparar":
+    st.subheader("Comparar de empresas")
     st.caption("Herramienta analítica independiente del chat. Usa datos externos actuales y contexto de PMS Max.")
     render_active_context()
 
@@ -971,7 +1029,7 @@ elif page=="Simulador":
 
 elif page=="Asesor IA":
     st.subheader("Asesor IA")
-    st.caption("Conversación libre y análisis contextual. Comparador y Simulador también tienen páginas propias.")
+    st.caption("Conversación libre y análisis contextual. Comparar y Simulador también tienen páginas propias.")
     try:
         advisor_ready=bool(st.secrets.get("OPENAI_API_KEY",""))
         advisor_model=st.secrets.get("OPENAI_MODEL","gpt-5.6")
