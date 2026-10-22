@@ -12,6 +12,8 @@ class TechnicalContextTests(unittest.TestCase):
   self.assertTrue(eligible_technical_snapshot(SNAP,"AAPL",["AAPL"]))
  def test_different_selected_ticker_rejected(self):
   self.assertFalse(eligible_technical_snapshot(SNAP,"MSFT",["AAPL","MSFT"]))
+ def test_active_ticker_not_same_as_question_rejected(self):
+  self.assertFalse(eligible_technical_snapshot(SNAP,"AAPL",["MSFT"]))
  def test_sole_mentioned_ticker_allowed(self):
   self.assertTrue(eligible_technical_snapshot(SNAP,"",["AAPL"]))
  def test_multiple_mentions_without_selection_rejected(self):
