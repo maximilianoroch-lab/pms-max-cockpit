@@ -134,7 +134,7 @@ def eligible_technical_snapshot(snapshot, selected_ticker="", mentioned_tickers=
         return False
     selected=str(selected_ticker or "").strip().upper()
     mentioned={str(t).strip().upper() for t in (mentioned_tickers or []) if str(t).strip()}
-    return symbol==selected if selected else mentioned=={symbol}
+    return (symbol==selected and (not mentioned or symbol in mentioned)) if selected else mentioned=={symbol}
 
 
 def describe_technical_snapshot(snapshot):
