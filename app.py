@@ -446,10 +446,16 @@ def render_company_comparison(result):
                     winner=a if va<vb else b
                 elif key in HIGHER_BETTER:
                     winner=a if va>vb else b
-        if not comparable and winner not in ("Sin ventaja clara","No comparable"):
-            winner += " (orientativo)"
-        elif not comparable:
+        # La diferencia numérica no acredita comparabilidad: no adjudicar un
+        # ganador cuando las definiciones o períodos declarados difieren.
+        if not comparable:
             winner="No comparable: criterios distintos"
+        period_a=str(m.get("period_a") or m.get("a_period") or "").strip()
+        period_b=str(m.get("period_b") or m.get("b_period") or "").strip()
+        if period_a and period_b and period_a!=period_b:
+            winner="No comparable: períodos distintos"
+        if (va is None or vb is None) and comparable:
+            winner="Dato insuficiente"
         unit=m.get("unit","")
         def fmt(v):
             if v is None:return "No disponible"
@@ -460,6 +466,8 @@ def render_company_comparison(result):
         desc=COMPARISON_HELP.get(key) if key else None
         if not desc:
             desc=m.get("description") or "Indicador adicional: interpretar según su definición y comparabilidad."
+        if period_a or period_b:
+            desc += f" · Período A: {period_a or 'no informado'}; período B: {period_b or 'no informado'}"
         rows.append({"Indicador":name,"Descripción":desc,a:fmt(va),b:fmt(vb),"Favorece":winner})
     st.subheader(f"Comparación de fundamentales · {a} vs {b}")
     if rows:
@@ -484,7 +492,7 @@ def render_company_comparison(result):
         .cmp-desc{color:#92a4b7;font-size:.78rem;margin-top:3px;line-height:1.35}
         </style>""",unsafe_allow_html=True)
         st.markdown("".join(html),unsafe_allow_html=True)
-        st.caption("«Favorece» es una ventaja relativa orientativa por indicador, no una recomendación ni un ganador global. Los múltiplos bajos pueden reflejar mayor riesgo; importan la calidad, el sector y la comparabilidad de las cifras.")
+        st.caption("«Favorece» solo se calcula cuando la comparación no está marcada como incompatible y existen cifras para ambas empresas. No es una recomendación ni un ganador global. Los múltiplos bajos pueden reflejar mayor riesgo; importan la calidad, el sector y la comparabilidad de las cifras.")
     else:
         st.info("No hay indicadores sectorialmente relevantes y verificables disponibles para esta comparación.")
     bullets=result.get("bullets",[])
