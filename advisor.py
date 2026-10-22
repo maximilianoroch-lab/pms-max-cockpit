@@ -194,7 +194,7 @@ Primero identificá el sector/tipo de ambas empresas. Mostrá EXCLUSIVAMENTE ind
 - Bancos: P/E, Forward P/E, ROE, ROA, crecimiento anualizado de ingresos 3-5 años (sólo si comparable), crecimiento EPS 3-5 años, NIM, morosidad, cobertura de mora, ratio de eficiencia y capital regulatorio.
 - Otras financieras: adaptá selectivamente según sentido económico.
 NO incluyas EV/EBITDA, ROIC, PEG o FCF convencional para bancos. NO muestres métricas no pertinentes.
-Si falta un dato, usá null; no inventes. Si ambos valores faltan, omití la métrica.
+Si falta un dato, usá null; no inventes. Si ambos valores faltan, omití la métrica. Para cada cifra completá period_a, period_b, source_a y source_b con enlaces de respaldo reales; sin respaldo explícito fijá comparable:false.
 Para crecimientos usá CAGR calculada con cifras históricas, no estimaciones sin identificarlas. Preferí series homogéneas. Para métricas % enviá números en puntos porcentuales (12.3 significa 12,3%).
 Usá búsqueda web y fuentes primarias cuando sea posible; indicá fechas y limitaciones de comparabilidad. No declares ganador de métrica con períodos, divisas o definiciones no homogéneos. Cada afirmación cuantitativa requiere fecha/fuente identificable; la búsqueda web no garantiza precisión.
 En bullets escribí 4 a 6 puntos breves y contrastantes, con ventajas/desventajas EXPLÍCITAS por ticker; evitá un empate vago.
@@ -203,7 +203,7 @@ En analysis escribí un desarrollo de extensión moderada (aprox 350 a 550 palab
 Contexto PMS: {json.dumps(ctx,ensure_ascii=False,default=str)}
 Respondé SOLO JSON válido, sin markdown externo, con esta forma:
 {{"company_a":"{ticker1.upper()}","company_b":"{ticker2.upper()}",
-"metrics":[{{"indicator":"P/E","a":12.5,"b":16.0,"unit":"x","relevant":true}},
+"metrics":[{{"indicator":"P/E","a":12.5,"b":16.0,"unit":"x","relevant":true,"comparable":true,"period_a":"2026-Q2","period_b":"2026-Q2","source_a":"URL de fuente primaria","source_b":"URL de fuente primaria"}},
 {{"indicator":"ROE","a":13.2,"b":10.4,"unit":"%","relevant":true}}],
 "bullets":["A FAVOR {ticker1.upper()}: ...","A FAVOR {ticker2.upper()}: ...","RIESGO {ticker1.upper()}: ...","RIESGO {ticker2.upper()}: ..."],
 "analysis":"..."}}"""
