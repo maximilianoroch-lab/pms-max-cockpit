@@ -1204,6 +1204,14 @@ elif page=="Asesor IA":
                 st.session_state.pop("technical_snapshot",None)
                 st.warning(f"No fue posible obtener un histórico verificable: {exc}")
         technical_data=st.session_state.get("technical_data")
+        loaded_symbol=str(st.session_state.get("technical_loaded_symbol","")).strip().upper()
+        current_symbol=str(technical_symbol or "").strip().upper()
+        # Evitar graficar o enviar al Asesor el historial de otro símbolo tras editar el campo.
+        if loaded_symbol != current_symbol:
+            technical_data=None
+            st.session_state.pop("technical_snapshot",None)
+            if loaded_symbol:
+                st.info("El símbolo cambió. Pulsá Consultar precios e indicadores para actualizar el gráfico.")
         if technical_data is not None and not technical_data.empty:
             st.caption(f"Símbolo consultado: {st.session_state.get('technical_loaded_symbol','')} · cierres ajustados diarios · los indicadores no son señales automáticas de compra o venta.")
             days={"6M":183,"1A":365,"3A":1095,"5A":1827}[selected_window]
@@ -1237,7 +1245,7 @@ elif page=="Asesor IA":
                 "sample_closes":int(len(technical_data)),
                 "scope":"Observación técnica descriptiva, sin predicción ni recomendación"
             }
-            st.caption("Estos indicadores se incorporarán como contexto al próximo análisis del Asesor IA. Corresponden exclusivamente al símbolo consultado.")
+            st.caption("Indicadores cargados y disponibles para el próximo análisis IA de este símbolo. Si cambiás de ticker, volvé a consultar el historial.")
     st.subheader("Asesor IA")
     st.caption("Conversación libre y análisis contextual. Comparar y Simulador también tienen páginas propias.")
     try:
