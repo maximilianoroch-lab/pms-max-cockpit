@@ -222,15 +222,15 @@ def custodian_color(custodian):
 
 def style_bar(fig, horizontal=True):
     """Aspecto compartido: barras compactas, borde fino y fondo transparente."""
-    fig.update_traces(marker_line_width=1, marker_line_color="rgba(228,237,248,0.32)", opacity=0.92)
+    fig.update_traces(marker_line_width=1.6, marker_line_color="rgba(231,240,250,0.52)", opacity=0.96)
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font_color="#dce6f2", bargap=0.38,
+        font_color="#dce6f2", bargap=0.42, barcornerradius=5,
         margin=dict(l=8,r=46,t=12,b=12),
         legend_title_text=""
     )
     if horizontal:
-        fig.update_yaxes(title_text=None, showgrid=False)
+        fig.update_yaxes(title_text=None, showgrid=False, categoryorder="total ascending")
         fig.update_xaxes(gridcolor="rgba(170,193,214,0.12)", zeroline=False)
     return fig
 
@@ -952,9 +952,10 @@ elif page=="Custodia":
                 category_orders={"Custodio":cust_totals.index.tolist()[::-1]},
                 labels={"Valor USD_num":"Valor USD","Grupo":"Cuenta / custodio"},
                 hover_data={"Custodio":True,"Grupo":True,"Valor USD_num":":,.0f"},
-                color_discrete_map={g:custodian_color(c) for c,g in chart_data[["Custodio","Grupo"]].itertuples(index=False,name=None)}
+                color_discrete_map={g:("#CDD2D9" if str(g).upper().endswith(("4666","1234")) else "#747D89") if str(c).strip().upper()=="CRITERIA" else custodian_color(c) for c,g in chart_data[["Custodio","Grupo"]].itertuples(index=False,name=None)}
             )
             style_bar(fig)
+            fig.update_yaxes(categoryorder="array",categoryarray=cust_totals.index.tolist()[::-1])
             fig.update_layout(barmode="stack",height=max(300,65*len(cust_totals)+100),
                 margin=dict(l=10,r=10,t=10,b=10),legend_title_text="Cuenta / custodio")
             st.plotly_chart(fig,width='stretch')
