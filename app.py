@@ -1189,7 +1189,12 @@ elif page=="Simulador":
 elif page=="Asesor IA":
     with st.expander("Análisis técnico · 5 años, EMA y RSI", expanded=True):
         st.caption("Indicadores diarios determinísticos sobre cierres ajustados. Fuente: Yahoo Finance (vía yfinance). Elegí el símbolo cotizado, por ejemplo AAPL o GGAL.BA; no se supone equivalencia automática con CEDEARs.")
-        symbol_default=st.session_state.get("active_ticker","") or ""
+        symbol_default=str(st.session_state.get("active_ticker","") or "").strip().upper()
+        # Sincronizar sólo cuando la selección global cambió, preservando la edición manual.
+        if st.session_state.get("_technical_last_active_ticker")!=symbol_default:
+            if symbol_default:
+                st.session_state["technical_symbol"]=symbol_default
+            st.session_state["_technical_last_active_ticker"]=symbol_default
         technical_symbol=st.text_input("Símbolo histórico",value=symbol_default,key="technical_symbol")
         selected_window=st.radio("Ventana",["6M","1A","3A","5A"],index=3,horizontal=True,key="technical_window")
         @st.cache_data(ttl=3600,show_spinner=False)
@@ -1204,6 +1209,7 @@ elif page=="Asesor IA":
         retry=st.button("Actualizar historial",key="technical_load",help="Opcional: fuerza una nueva consulta del símbolo.")
         if retry and current_symbol:
             _cached_technical_history.clear()
+        # Sincronizar también un cambio de versión/datos sin requerir interacción.
         if current_symbol and (current_symbol!=loaded_symbol or retry):
             st.session_state["technical_loaded_symbol"]=current_symbol
             st.session_state.pop("technical_data",None)
