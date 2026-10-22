@@ -127,7 +127,7 @@ with st.sidebar:
     else:
         st.caption("Asesor IA: pendiente de API key")
 
-from presentation_format import (fmt_usd, fmt_num, fmt_pct, pct_points, table_money, colored_variation, local_num, compact_status, compact_name, change_html)
+from presentation_format import (fmt_usd, fmt_num, fmt_pct, pct_points, table_money, colored_variation, local_num, compact_status, compact_name, change_html, style_bar, custodian_color, signed_number, signed_color)
 
 def metric_card(label,value,sub="",change=None):
     delta=f"<div>{change_html(change)}</div>" if change is not None else ""
@@ -475,12 +475,13 @@ if page=="Resumen":
             chart=source[source["Grupo"].isin(order)].groupby("Grupo",as_index=False)["Valor USD_num"].sum()
             total=float(source["Valor USD_num"].sum())
             chart["Peso"]=chart["Valor USD_num"]/total*100 if total else 0
-            chart["Etiqueta"]=chart["Peso"].map(lambda x:f"{x:.0f}%")
+            chart["Etiqueta"]=chart["Peso"].map(lambda x:f"{x:.1f}%".replace(".",","))
             chart=chart.sort_values("Peso",ascending=True)
             fig=px.bar(chart,x="Peso",y="Grupo",orientation="h",text="Etiqueta",
-                       category_orders={"Grupo":order[::-1]},
+                       category_orders={"Grupo":chart["Grupo"].tolist()},
                        labels={"Peso":"% del patrimonio","Grupo":""},
                        color_discrete_sequence=["#598eb8"])
+            style_bar(fig)
             fig.update_traces(textposition="outside",cliponaxis=False,width=0.42)
             fig.update_layout(height=260,margin=dict(l=10,r=40,t=10,b=10),showlegend=False,
                               xaxis_ticksuffix="%",yaxis_title=None)
@@ -534,6 +535,7 @@ elif page=="Diversificación":
             labels={"Valor USD_num":"Valor USD"},
             color_discrete_sequence=["#79bff2"]
         )
+        style_bar(fig)
         fig.update_layout(yaxis_title=None)
         ev=st.plotly_chart(fig,width='stretch',on_select="rerun",selection_mode="points",key="region_chart")
         try:
@@ -549,6 +551,7 @@ elif page=="Diversificación":
             labels={"Sector Valor USD_num":"Valor USD"},
             color_discrete_sequence=["#4f8fc7"]
         )
+        style_bar(fig)
         fig.update_layout(yaxis_title=None)
         ev2=st.plotly_chart(fig,width='stretch',on_select="rerun",selection_mode="points",key="sector_chart")
         try:
@@ -661,14 +664,18 @@ elif page=="Evolución":
             st.subheader("Cambio entre snapshots")
             x,y,z=st.columns(3)
             x.metric("Último patrimonio",fmt_usd(latest["Valor total USD_num"]))
-            y.metric("Cambio USD",fmt_usd(latest["Cambio USD"]))
-            z.metric("Cambio %",f'{latest["Cambio %"]:+.2f}%'.replace(".",","))
+            y.markdown(f'**Cambio USD**\n\n<span style="{signed_color(latest["Cambio USD"])};font-size:2rem;font-weight:600">{signed_number(latest["Cambio USD"])}</span>',unsafe_allow_html=True)
+            z.markdown(f'**Cambio %**\n\n<span style="{signed_color(latest["Cambio %"])};font-size:2rem;font-weight:600">{signed_number(latest["Cambio %"],percentage=True)}</span>',unsafe_allow_html=True)
             st.caption(f'Del {prev["Fecha orden"].strftime("%d/%m/%Y")} al {latest["Fecha orden"].strftime("%d/%m/%Y")} · variación patrimonial sin ajustar por aportes/retiros; no es rentabilidad.')
         snap_show=snaps[["Fecha","Fecha orden","Valor total USD_num","Cambio USD","Cambio %"]].tail(20).sort_values("Fecha orden",ascending=False).copy()
         snap_show["Patrimonio USD"]=snap_show["Valor total USD_num"].map(fmt_usd)
-        snap_show["Cambio USD"]=snap_show["Cambio USD"].map(lambda v: fmt_usd(v) if pd.notna(v) else "—")
-        snap_show["Cambio %"]=snap_show["Cambio %"].map(lambda v: f"{v:+.2f}%".replace(".",",") if pd.notna(v) else "—")
-        st.dataframe(snap_show[["Fecha","Patrimonio USD","Cambio USD","Cambio %"]],hide_index=True,width="stretch")
+        raw_usd=snap_show["Cambio USD"].copy()
+        raw_pct=snap_show["Cambio %"].copy()
+        snap_show["Fecha"]=snap_show["Fecha orden"].dt.strftime("%d/%m/%Y")
+        snap_show["Cambio USD"]=raw_usd.map(signed_number)
+        snap_show["Cambio %"]=raw_pct.map(lambda v:signed_number(v,percentage=True))
+        snapshot_style=snap_show[["Fecha","Patrimonio USD","Cambio USD","Cambio %"]].style.apply(lambda _: [signed_color(x) for x in raw_usd],subset=["Cambio USD"],axis=0).apply(lambda _: [signed_color(x) for x in raw_pct],subset=["Cambio %"],axis=0)
+        st.dataframe(snapshot_style,hide_index=True,width="stretch")
     evo=data["dashboard_evolucion_v2"].copy()
     hist=evo[evo["Valor total USD_num"].gt(0)].copy()
     fig=px.line(hist,x="Fecha",y="Valor total USD_num",markers=True,labels={"Valor total USD_num":"Patrimonio USD"})
@@ -713,6 +720,7 @@ elif page=="Riesgo":
                 labels={impact_usd_col:"Impacto USD"},
                 color_discrete_sequence=["#d06a74"]
             )
+            style_bar(fig)
             st.plotly_chart(fig,width='stretch')
         elif impact_pct_col:
             tmp=stress.copy()
@@ -727,6 +735,7 @@ elif page=="Riesgo":
                 labels={"_impact_pct":"Impacto cartera (%)"},
                 color_discrete_sequence=["#d06a74"]
             )
+            style_bar(fig)
             st.plotly_chart(fig,width='stretch')
         else:
             st.info("Stress test disponible, pero la fuente no expone una columna de impacto graficable.")
@@ -822,8 +831,10 @@ elif page=="Custodia":
                 chart_data,x="Valor USD_num",y="Custodio",color="Grupo",orientation="h",
                 category_orders={"Custodio":cust_totals.index.tolist()[::-1]},
                 labels={"Valor USD_num":"Valor USD","Grupo":"Cuenta / custodio"},
-                hover_data={"Custodio":True,"Grupo":True,"Valor USD_num":":,.0f"}
+                hover_data={"Custodio":True,"Grupo":True,"Valor USD_num":":,.0f"},
+                color_discrete_map={g:custodian_color(c) for c,g in chart_data[["Custodio","Grupo"]].itertuples(index=False,name=None)}
             )
+            style_bar(fig)
             fig.update_layout(barmode="stack",height=max(300,65*len(cust_totals)+100),
                 margin=dict(l=10,r=10,t=10,b=10),legend_title_text="Cuenta / custodio")
             st.plotly_chart(fig,width='stretch')
@@ -839,6 +850,7 @@ elif page=="Custodia":
                 chart_rows,x="Valor USD_num",y="Ticker",color="Cuenta",orientation="h",
                 labels={"Valor USD_num":"Valor USD"}
             )
+            style_bar(fig)
             st.plotly_chart(fig,width='stretch')
     rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Cantidad_num","Valor USD_num","Peso custodio_num"]].copy()
     rows_show["Cantidad_num"]=rows_show["Cantidad_num"].map(lambda x:fmt_num(x,0) if float(x).is_integer() else fmt_num(x,4))

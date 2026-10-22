@@ -81,3 +81,42 @@ def change_html(v):
     if x>0:return f'<span class="up">▲ +{x*100:.1f}%</span>'
     if x<0:return f'<span class="down">▼ {x*100:.1f}%</span>'
     return '<span class="flat">→ 0,0%</span>'
+
+# Color institucional: puede variarse brillo, pero nunca su identidad de base.
+CUSTODIAN_COLORS = {
+    "CRITERIA": "#9CA5B1", "BINANCE": "#D4AA28",
+    "ADCAP": "#74AE52", "BBVA": "#3678BC",
+    "IOL": "#8EB7D9", "GALICIA": "#D88A42",
+    "SANTANDER": "#CC4C4C",
+}
+
+def custodian_color(custodian):
+    return CUSTODIAN_COLORS.get(str(custodian).strip().upper(), "#748CA5")
+
+def style_bar(fig, horizontal=True):
+    """Aspecto compartido: barras compactas, borde fino y fondo transparente."""
+    fig.update_traces(marker_line_width=1, marker_line_color="rgba(228,237,248,0.32)", opacity=0.92)
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font_color="#dce6f2", bargap=0.38,
+        margin=dict(l=8,r=46,t=12,b=12),
+        legend_title_text=""
+    )
+    if horizontal:
+        fig.update_yaxes(title_text=None, showgrid=False)
+        fig.update_xaxes(gridcolor="rgba(170,193,214,0.12)", zeroline=False)
+    return fig
+
+def signed_number(v, percentage=False):
+    if v is None or pd.isna(v): return "—"
+    n=float(v)
+    if percentage:
+        displayed=round(n,1)
+        return ("+" if displayed>0 else "") + f"{displayed:.1f}%".replace(".",",")
+    rounded=round(n)
+    return ("+" if rounded>0 else "") + fmt_usd(rounded)
+
+def signed_color(v):
+    if v is None or pd.isna(v): return "color: #93a7bd"
+    n=float(v)
+    return "color: #5fc89c" if n>0 else ("color: #f07878" if n<0 else "color: #93a7bd")
