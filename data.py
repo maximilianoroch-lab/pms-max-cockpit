@@ -126,7 +126,20 @@ def portfolio_summary(data):
     # but current-state values only survive if they reconcile.
     home_total=val("Patrimonio total")
     tolerance=max(5.0, feed_total*0.002) if feed_total else 5.0
-    reconciled=bool(feed_total and abs(home_total-feed_total)<=tolerance)
+    # No aceptar como conciliado un HOME con composición incompatible.
+    # Diferencias menores a USD 5 cubren redondeos, no desvíos materiales.
+    tolerance=5.0
+    home_crypto=val("Crypto USD")
+    home_non_crypto=val("Patrimonio sin Crypto")
+    home_positions=val("Cantidad posiciones")
+    reconciled=bool(
+        feed_total>0
+        and abs(home_total-feed_total)<=tolerance
+        and abs(home_crypto-feed_crypto)<=tolerance
+        and abs(home_non_crypto-feed_non_crypto)<=tolerance
+        and abs(home_total-(home_crypto+home_non_crypto))<=tolerance
+        and int(home_positions)==feed_positions
+    )
 
     if reconciled:
         total=home_total
