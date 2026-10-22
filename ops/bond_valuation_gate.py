@@ -3,6 +3,7 @@
 import argparse
 import datetime as dt
 import json
+import math
 from pathlib import Path
 
 EXPECTED={"AN29","AO28","AO29","GD35","GD38","GD41"}
@@ -31,8 +32,15 @@ def assess(payload, today=None):
         if not q.get("source","").startswith("https://iol.invertironline.com/"):
             reasons.append("UNTRUSTED_SOURCE")
         # The diagnostic has no validated numeric close column yet.
-        if q.get("verified_close_ars_per_100_vn") is None:
+        close=q.get("verified_close_ars_per_100_vn")
+        if isinstance(close,bool) or not isinstance(close,(int,float)) or not math.isfinite(close) or close<=0:
             reasons.append("CLOSE_NOT_VERIFIED")
+        if q.get("verified_market_date")!=last.get("market_date"):
+            reasons.append("CLOSE_DATE_NOT_ATTESTED")
+        if q.get("unit_evidence") not in ("BROKER_DOCUMENTED", "EXCHANGE_DOCUMENTED"):
+            reasons.append("UNIT_EVIDENCE_MISSING")
+        if q.get("currency_evidence") not in ("BROKER_DOCUMENTED", "EXCHANGE_DOCUMENTED"):
+            reasons.append("CURRENCY_EVIDENCE_MISSING")
         if q.get("valuation_eligible") is not True:
             reasons.append("SOURCE_NOT_APPROVED")
         rows.append({"ticker":symbol,"eligible":not reasons,"reasons":reasons,
