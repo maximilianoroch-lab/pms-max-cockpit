@@ -952,9 +952,10 @@ elif page=="Custodia":
                 category_orders={"Custodio":cust_totals.index.tolist()[::-1]},
                 labels={"Valor USD_num":"Valor USD","Grupo":"Cuenta / custodio"},
                 hover_data={"Custodio":True,"Grupo":True,"Valor USD_num":":,.0f"},
-                color_discrete_map={g:custodian_color(c) for c,g in chart_data[["Custodio","Grupo"]].itertuples(index=False,name=None)}
+                color_discrete_map={g:("#CDD2D9" if str(g).upper().endswith(("4666","1234")) else "#747D89") if str(c).strip().upper()=="CRITERIA" else custodian_color(c) for c,g in chart_data[["Custodio","Grupo"]].itertuples(index=False,name=None)}
             )
             style_bar(fig)
+            fig.update_yaxes(categoryorder="array",categoryarray=cust_totals.index.tolist()[::-1])
             fig.update_layout(barmode="stack",height=max(300,65*len(cust_totals)+100),
                 margin=dict(l=10,r=10,t=10,b=10),legend_title_text="Cuenta / custodio")
             st.plotly_chart(fig,width='stretch')
