@@ -650,13 +650,17 @@ elif page=="Diversificación":
     with c1:
         st.markdown("### Región")
         r=ex[["Región","Valor USD_num","Peso_num"]].dropna(subset=["Región"]).sort_values("Valor USD_num",ascending=True)
+        r["Etiqueta"]=r["Peso_num"].map(lambda v:f"{v*100:.1f}%".replace(".",","))
         fig=px.bar(
-            r,x="Valor USD_num",y="Región",orientation="h",hover_data={"Peso_num":":.1%"},
+            r,x="Valor USD_num",y="Región",orientation="h",text="Etiqueta",
             labels={"Valor USD_num":"Valor USD"},
             color_discrete_sequence=["#79bff2"]
         )
         style_bar(fig)
-        fig.update_layout(yaxis_title=None)
+        fig.update_traces(textposition="outside",cliponaxis=False,textfont_size=13,
+                          customdata=r[["Región"]].to_numpy(),
+                          hovertemplate="<b>Región: %{y}</b><br>Monto: US$ %{x:,.0f}<extra></extra>")
+        fig.update_layout(yaxis_title=None,margin=dict(l=8,r=70,t=12,b=12))
         ev=st.plotly_chart(fig,width='stretch',on_select="rerun",selection_mode="points",key="region_chart")
         try:
             pts=ev.selection.points
@@ -666,13 +670,16 @@ elif page=="Diversificación":
     with c2:
         st.markdown("### Sector")
         s=ex[["Sector","Sector Valor USD_num","Sector Peso_num"]].dropna(subset=["Sector"]).sort_values("Sector Valor USD_num",ascending=True)
+        s["Etiqueta"]=s["Sector Peso_num"].map(lambda v:f"{v*100:.1f}%".replace(".",","))
         fig=px.bar(
-            s,x="Sector Valor USD_num",y="Sector",orientation="h",hover_data={"Sector Peso_num":":.1%"},
+            s,x="Sector Valor USD_num",y="Sector",orientation="h",text="Etiqueta",
             labels={"Sector Valor USD_num":"Valor USD"},
             color_discrete_sequence=["#4f8fc7"]
         )
         style_bar(fig)
-        fig.update_layout(yaxis_title=None)
+        fig.update_traces(textposition="outside",cliponaxis=False,textfont_size=13,
+                          hovertemplate="<b>Sector: %{y}</b><br>Monto: US$ %{x:,.0f}<extra></extra>")
+        fig.update_layout(yaxis_title=None,margin=dict(l=8,r=70,t=12,b=12))
         ev2=st.plotly_chart(fig,width='stretch',on_select="rerun",selection_mode="points",key="sector_chart")
         try:
             pts=ev2.selection.points
@@ -723,6 +730,7 @@ elif page=="Diversificación":
         )
         fig.update_traces(
             textposition="inside",
+            textfont_size=15,
             texttemplate="%{label}<br>US$ %{value:,.0f}<br>%{percent}",
             hovertemplate="<b>%{label}</b><br>Valor: US$ %{value:,.0f}<br>Peso: %{percent}<extra></extra>"
         )
@@ -742,7 +750,7 @@ elif page=="Diversificación":
                 {"Valor USD_num":"sum","Peso cartera_num":"sum"}
             ).sort_values("Valor USD_num",ascending=False).head(8)
             etf_rows["Texto"]=etf_rows.apply(
-                lambda r:f'{r["Peso cartera_num"]*100:.1f}% · {fmt_usd(r["Valor USD_num"])}'.replace(".",",",1),axis=1
+                lambda r:f'{r["Peso cartera_num"]*100:.1f}%'.replace(".",","),axis=1
             )
             order=etf_rows["Ticker"].tolist()
             etf_chart=etf_rows.sort_values("Valor USD_num",ascending=True)
@@ -752,7 +760,8 @@ elif page=="Diversificación":
                        category_orders={"Ticker":order[::-1]})
             style_bar(fig)
             fig.update_yaxes(categoryorder="array",categoryarray=order[::-1])
-            fig.update_traces(textposition="outside",cliponaxis=False,width=0.54,textfont_size=14)
+            fig.update_traces(textposition="outside",cliponaxis=False,width=0.54,textfont_size=14,
+                              hovertemplate="<b>ETF: %{y}</b><br>Monto: US$ %{x:,.0f}<extra></extra>")
             fig.update_yaxes(tickfont_size=14)
             fig.update_layout(height=max(260,52*len(etf_chart)+65),showlegend=False,
                               margin=dict(l=5,r=165,t=6,b=30),bargap=0.12)
