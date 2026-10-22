@@ -730,45 +730,32 @@ elif page=="Diversificación":
         st.plotly_chart(fig,width='stretch')
 
     with d2:
-        st.markdown("""<style>div[data-testid="stVerticalBlock"]:has(.etf-bar-section) {gap:0.32rem;} div[data-testid="stVerticalBlock"]:has(.etf-bar-section) [data-testid="stProgress"] {min-height:28px;} div[data-testid="stVerticalBlock"]:has(.etf-bar-section) [data-testid="stProgress"] > div {height:28px!important;min-height:28px!important;border-radius:6px;} div[data-testid="stVerticalBlock"]:has(.etf-bar-section) [data-testid="stProgress"] [role="progressbar"] {height:28px!important;min-height:28px!important;border-radius:6px;}</style><span class="etf-bar-section"></span>""",unsafe_allow_html=True)
         st.markdown("### ETFs principales")
-        st.caption("Detalle técnico de ETFs; GLD permanece Oro en la composición principal.")
-
-        etf_rows = app_positions.loc[
+        st.caption("ETFs directos de la cartera · ordenados por valor, de mayor a menor.")
+        etf_rows=app_positions.loc[
             app_positions["Tipo"].astype(str).str.upper().eq("ETF")
         ].copy() if not app_positions.empty and "Tipo" in app_positions.columns else pd.DataFrame()
-
         if not etf_rows.empty:
-            keep_cols=[c for c in ["Ticker","Valor USD_num","Peso cartera_num","Variación_num"] if c in etf_rows.columns]
-            etf_rows=etf_rows[keep_cols].copy()
             if "Peso cartera_num" not in etf_rows.columns:
                 etf_rows["Peso cartera_num"]=etf_rows["Valor USD_num"]/total_port if total_port else 0.0
-
-            agg={"Valor USD_num":"sum","Peso cartera_num":"sum"}
-            if "Variación_num" in etf_rows.columns:
-                agg["Variación_num"]="mean"
-
-            etf_rows=etf_rows.groupby("Ticker",as_index=False).agg(agg)
-            etf_rows=etf_rows.sort_values("Valor USD_num",ascending=False).head(8)
-
-            max_etf=float(etf_rows["Valor USD_num"].max()) if not etf_rows.empty else 1.0
-            for _,r in etf_rows.iterrows():
-                ticker=str(r["Ticker"])
-                value=float(r["Valor USD_num"])
-                weight=float(r["Peso cartera_num"])
-                chg=float(r["Variación_num"]) if "Variación_num" in etf_rows.columns and pd.notna(r["Variación_num"]) else None
-
-                c_t,c_v,c_c=st.columns([1.0,2.1,1.05])
-                with c_t:
-                    st.markdown(f"**{ticker}**")
-                with c_v:
-                    st.markdown(f"**{weight:.1%} · US$ {value:,.0f}**")
-                with c_c:
-                    if chg is not None:
-                        arrow="▲" if chg>=0 else "▼"
-                        etf_color="#43d59c" if chg>0 else ("#ff7070" if chg<0 else "#9aacc0")
-                        st.markdown(f'<span style="color:{etf_color};font-weight:700">{arrow} {chg:+.1%}</span>',unsafe_allow_html=True)
-                st.progress(min(max(value/max_etf,0.0),1.0))
+            etf_rows=etf_rows.groupby("Ticker",as_index=False).agg(
+                {"Valor USD_num":"sum","Peso cartera_num":"sum"}
+            ).sort_values("Valor USD_num",ascending=False).head(8)
+            etf_rows["Texto"]=etf_rows.apply(
+                lambda r:f'{r["Peso cartera_num"]*100:.1f}% · {fmt_usd(r["Valor USD_num"])}'.replace(".",",",1),axis=1
+            )
+            order=etf_rows["Ticker"].tolist()
+            etf_chart=etf_rows.sort_values("Valor USD_num",ascending=True)
+            fig=px.bar(etf_chart,x="Valor USD_num",y="Ticker",orientation="h",text="Texto",
+                       labels={"Valor USD_num":"Valor USD","Ticker":""},
+                       color_discrete_sequence=["#528fbf"],
+                       category_orders={"Ticker":order[::-1]})
+            style_bar(fig)
+            fig.update_yaxes(categoryorder="array",categoryarray=order[::-1])
+            fig.update_traces(textposition="outside",cliponaxis=False,width=0.65)
+            fig.update_layout(height=max(260,52*len(etf_chart)+65),showlegend=False,
+                              margin=dict(l=5,r=165,t=6,b=30),bargap=0.24)
+            st.plotly_chart(fig,width="stretch")
         else:
             st.caption("No hay ETFs directos para mostrar.")
 
