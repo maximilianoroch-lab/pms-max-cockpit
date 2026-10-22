@@ -87,8 +87,8 @@ with st.sidebar:
     st.markdown("### IA")
     ai_open=st.button("Asesor IA",width='stretch')
     if ai_open:
-        st.session_state["dashboard_nav"]="Resumen"
-        st.session_state["tools_nav"]="—"
+        # Los widgets dashboard_nav/tools_nav ya están instanciados en este rerun.
+        # No modificar sus keys directamente: StreamlitWidgetAlreadyInstantiatedError.
         st.session_state["force_page"]="Asesor IA"
     if tool_page!="—":
         page={"Comparar Activos":"Comparar","Simular Compra/Venta":"Simulador"}.get(tool_page,tool_page)
