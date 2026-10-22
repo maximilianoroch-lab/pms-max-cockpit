@@ -498,6 +498,10 @@ def render_company_comparison(result):
             winner="No comparable: criterios distintos"
         period_a=str(m.get("period_a") or m.get("a_period") or "").strip()
         period_b=str(m.get("period_b") or m.get("b_period") or "").strip()
+        source_a=str(m.get("source_a") or "").strip()
+        source_b=str(m.get("source_b") or "").strip()
+        if not (period_a and period_b and source_a.startswith("https://") and source_b.startswith("https://")):
+            winner="Fuentes o períodos sin verificar"
         if period_a and period_b and period_a!=period_b:
             winner="No comparable: períodos distintos"
         if (va is None or vb is None) and comparable:
@@ -514,6 +518,8 @@ def render_company_comparison(result):
             desc=m.get("description") or "Indicador adicional: interpretar según su definición y comparabilidad."
         if period_a or period_b:
             desc += f" · Período A: {period_a or 'no informado'}; período B: {period_b or 'no informado'}"
+        if source_a.startswith("https://") and source_b.startswith("https://"):
+            desc += " · Fuentes informadas para ambos activos (revisar antes de decidir)"
         rows.append({"Indicador":name,"Descripción":desc,a:fmt(va),b:fmt(vb),"Favorece":winner})
     st.subheader(f"Comparación de fundamentales · {a} vs {b}")
     if rows:
