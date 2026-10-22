@@ -73,14 +73,16 @@ with st.sidebar:
         "Dashboard",
         ["Resumen","Diversificación","Evolución","Riesgo","Custodia","Posiciones"],
         label_visibility="collapsed",
-        key="dashboard_nav"
+        key="dashboard_nav",
+        on_change=lambda: (st.session_state.pop("force_page",None),st.session_state.update(tools_nav="—"))
     )
     st.markdown("### Herramientas")
     tool_page=st.radio(
         "Herramientas",
         ["—","Comparar","Simulador"],
         label_visibility="collapsed",
-        key="tools_nav"
+        key="tools_nav",
+        on_change=lambda: st.session_state.pop("force_page",None)
     )
     st.markdown("### IA")
     ai_open=st.button("Asesor IA",width='stretch')
@@ -554,9 +556,9 @@ if page=="Resumen":
             fig=px.bar(chart,x="Peso",y="Grupo",orientation="h",text="Etiqueta",
                        category_orders={"Grupo":order[::-1]},
                        labels={"Peso":"% del patrimonio","Grupo":""},
-                       color_discrete_sequence=["#86b6e8"])
-            fig.update_traces(textposition="outside",cliponaxis=False)
-            fig.update_layout(height=300,margin=dict(l=10,r=30,t=10,b=10),showlegend=False,
+                       color_discrete_sequence=["#598eb8"])
+            fig.update_traces(textposition="outside",cliponaxis=False,width=0.42)
+            fig.update_layout(height=260,margin=dict(l=10,r=40,t=10,b=10),showlegend=False,
                               xaxis_ticksuffix="%",yaxis_title=None)
             st.plotly_chart(fig,width='stretch')
             st.caption("Peso sobre patrimonio total; el efectivo se incluye en el total, pero no se grafica.")
@@ -1094,7 +1096,7 @@ elif page=="Simulador":
                     st.rerun()
 
 elif page=="Asesor IA":
-    with st.expander("Análisis técnico · 5 años, EMA y RSI", expanded=False):
+    with st.expander("Análisis técnico · 5 años, EMA y RSI", expanded=True):
         st.caption("Indicadores diarios determinísticos sobre cierres ajustados. Fuente: Yahoo Finance (vía yfinance). Elegí el símbolo cotizado, por ejemplo AAPL o GGAL.BA; no se supone equivalencia automática con CEDEARs.")
         symbol_default=st.session_state.get("active_ticker","") or ""
         technical_symbol=st.text_input("Símbolo histórico",value=symbol_default,key="technical_symbol")
