@@ -752,8 +752,9 @@ elif page=="Diversificación":
                        category_orders={"Ticker":order[::-1]})
             style_bar(fig)
             fig.update_yaxes(categoryorder="array",categoryarray=order[::-1])
-            fig.update_traces(textposition="outside",cliponaxis=False,width=0.32)
-            fig.update_layout(height=max(175,27*len(etf_chart)+55),showlegend=False,
+            fig.update_traces(textposition="outside",cliponaxis=False,width=0.54,textfont_size=14)
+            fig.update_yaxes(tickfont_size=14)
+            fig.update_layout(height=max(260,52*len(etf_chart)+65),showlegend=False,
                               margin=dict(l=5,r=165,t=6,b=30),bargap=0.12)
             st.plotly_chart(fig,width="stretch")
         else:
