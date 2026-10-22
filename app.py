@@ -896,24 +896,27 @@ elif page=="Custodia":
     cust_options=["TODOS"]+sorted(detail_visible["Custodio"].dropna().astype(str).unique().tolist())
     cust=st.selectbox("Custodio",cust_options,index=0)
 
+    # Dos universos explícitos: patrimonio custodio incluye efectivo;
+    # la tabla navegable presenta solo activos invertidos.
     if cust=="TODOS":
         st.session_state["analysis_context"]={"dimension":"","value":""}
-        total_val=float(detail_visible["Valor USD_num"].sum())
-        total_accounts=int(detail_visible["Cuenta"].nunique())
-        a,b,c=st.columns(3)
-        a.metric("Valor",fmt_usd(total_val))
-        b.metric("Peso cartera",fmt_pct(total_val/position_total if position_total else 0))
-        c.metric("Cuentas",total_accounts)
+        custody_scope=detail.copy()
         rows=detail_visible.copy().sort_values("Valor USD_num",ascending=False)
     else:
         st.session_state["analysis_context"]={"dimension":"Custodio","value":cust}
-        s=detail_visible[detail_visible["Custodio"]==cust]
-        cust_value=float(s["Valor USD_num"].sum())
-        a,b,c=st.columns(3)
-        a.metric("Valor",fmt_usd(cust_value))
-        b.metric("Peso cartera",fmt_pct(cust_value/position_total if position_total else 0))
-        c.metric("Cuentas",int(s["Cuenta"].nunique()))
-        rows=s.copy().sort_values("Valor USD_num",ascending=False)
+        custody_scope=detail[detail["Custodio"]==cust].copy()
+        rows=detail_visible[detail_visible["Custodio"]==cust].copy().sort_values("Valor USD_num",ascending=False)
+    total_val=float(custody_scope["Valor USD_num"].sum())
+    invested_val=float(rows["Valor USD_num"].sum())
+    total_accounts=int(custody_scope["Cuenta"].nunique())
+    c1,c2,c3=st.columns(3)
+    c1.metric("Patrimonio bajo custodia",fmt_usd(total_val))
+    c2.metric("Peso en cartera",fmt_pct(total_val/position_total if position_total else 0))
+    c3.metric("Cuentas",total_accounts)
+    st.caption(
+        f"Patrimonio invertido: {fmt_usd(invested_val)} ({fmt_pct(invested_val/position_total if position_total else 0)} de cartera)"
+        " · CASH incluido en custodia y patrimonio, excluido del detalle de títulos."
+    )
 
     # Navegación progresiva: custodio → cuenta → ticker; nunca cambia el patrimonio consolidado.
     accounts=sorted(rows["Cuenta"].dropna().astype(str).unique().tolist())
@@ -929,7 +932,7 @@ elif page=="Custodia":
     st.caption("Detalle filtrado (sin modificar el patrimonio global)")
     v1,v2,v3=st.columns(3)
     v1.metric("Valor seleccionado",fmt_usd(selected_value))
-    v2.metric("Peso en cartera",fmt_pct(selected_weight))
+    v2.metric("Peso invertido en cartera",fmt_pct(selected_weight))
     v3.metric("Registros",len(rows))
     if rows.empty:
         st.info("No hay posiciones con estos filtros.")
