@@ -730,6 +730,7 @@ elif page=="Diversificación":
         st.plotly_chart(fig,width='stretch')
 
     with d2:
+        st.markdown("""<style>div[data-testid="stVerticalBlock"]:has(.etf-bar-section) {gap:0.32rem;} div[data-testid="stVerticalBlock"]:has(.etf-bar-section) [data-testid="stProgress"] {min-height:15px;} div[data-testid="stVerticalBlock"]:has(.etf-bar-section) [data-testid="stProgress"] > div {height:15px;}</style><span class="etf-bar-section"></span>""",unsafe_allow_html=True)
         st.markdown("### ETFs principales")
         st.caption("Detalle técnico de ETFs; GLD permanece Oro en la composición principal.")
 
