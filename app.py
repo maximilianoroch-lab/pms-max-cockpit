@@ -87,6 +87,8 @@ with st.sidebar:
     st.markdown("### IA")
     ai_open=st.button("Asesor IA",width='stretch')
     if ai_open:
+        st.session_state["dashboard_nav"]="Resumen"
+        st.session_state["tools_nav"]="—"
         st.session_state["force_page"]="Asesor IA"
     if tool_page!="—":
         page=tool_page
