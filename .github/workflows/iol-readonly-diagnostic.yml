@@ -8,6 +8,8 @@ on:
       - 'ops/test_bond_valuation_gate.py'
       - 'ops/bond_quote_stage.py'
       - 'ops/test_bond_quote_stage.py'
+      - 'ops/iol_usd_probe.py'
+      - 'ops/test_iol_usd_probe.py'
       - '.github/workflows/iol-readonly-diagnostic.yml'
   workflow_dispatch:
   schedule:
@@ -31,6 +33,8 @@ jobs:
         run: python ops/bond_valuation_gate.py --input iol_quotes_diagnostic.json --output bond_valuation_gate.json
       - name: Stage potential quotes (read only; blocks without verified FX)
         run: python ops/bond_quote_stage.py --quotes iol_quotes_diagnostic.json --output bond_staging_report.json
+      - name: Probe six USD bond species (read only)
+        run: python ops/iol_usd_probe.py
       - name: Retain raw diagnostic only
         uses: actions/upload-artifact@v4
         with:
@@ -39,4 +43,5 @@ jobs:
             iol_quotes_diagnostic.json
             bond_valuation_gate.json
             bond_staging_report.json
+            iol_usd_bonds_diagnostic.json
           retention-days: 7
