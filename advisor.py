@@ -144,7 +144,7 @@ def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker
         requested=str(selected_ticker or "").upper().strip()
         mentions=[str(t).upper() for t in ctx.get("mentioned_tickers",[])]
         # Evitar trasladar indicadores de un símbolo anterior a otro activo sin advertirlo.
-        if snap_symbol and snap_date and (not requested or snap_symbol==requested or snap_symbol in mentions):
+        if snap_symbol and snap_date and ((requested and snap_symbol==requested) or (not requested and len(mentions)==1 and snap_symbol==mentions[0])):
             ctx["technical_indicators_requested_symbol"]=technical_snapshot
         else:
             ctx["technical_snapshot_excluded_reason"]="Símbolo técnico distinto del ticker activo/consultado; volver a consultar el símbolo deseado."
