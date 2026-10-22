@@ -1192,26 +1192,35 @@ elif page=="Asesor IA":
         symbol_default=st.session_state.get("active_ticker","") or ""
         technical_symbol=st.text_input("Símbolo histórico",value=symbol_default,key="technical_symbol")
         selected_window=st.radio("Ventana",["6M","1A","3A","5A"],index=3,horizontal=True,key="technical_window")
-        if st.button("Consultar precios e indicadores",key="technical_load"):
-            try:
-                from technical import fetch_history
-                with st.spinner("Consultando historial..."):
-                    st.session_state["technical_data"]=fetch_history(technical_symbol)
-                    st.session_state["technical_loaded_symbol"]=technical_symbol.upper().strip()
-                    st.session_state.pop("technical_snapshot",None)
-            except Exception as exc:
-                st.session_state.pop("technical_data",None)
-                st.session_state.pop("technical_snapshot",None)
-                st.warning(f"No fue posible obtener un histórico verificable: {exc}")
-        technical_data=st.session_state.get("technical_data")
-        loaded_symbol=str(st.session_state.get("technical_loaded_symbol","")).strip().upper()
+        @st.cache_data(ttl=3600,show_spinner=False)
+        def _cached_technical_history(sym):
+            from technical import fetch_history
+            return fetch_history(sym)
+
         current_symbol=str(technical_symbol or "").strip().upper()
-        # Evitar graficar o enviar al Asesor el historial de otro símbolo tras editar el campo.
-        if loaded_symbol != current_symbol:
-            technical_data=None
+        loaded_symbol=str(st.session_state.get("technical_loaded_symbol","")).strip().upper()
+        # Seleccionar otro símbolo dispara automáticamente una única consulta.
+        # Cachear hasta una hora; cambiar la ventana sólo filtra localmente.
+        retry=st.button("Actualizar historial",key="technical_load",help="Opcional: fuerza una nueva consulta del símbolo.")
+        if retry and current_symbol:
+            _cached_technical_history.clear()
+        if current_symbol and (current_symbol!=loaded_symbol or retry):
+            st.session_state["technical_loaded_symbol"]=current_symbol
+            st.session_state.pop("technical_data",None)
             st.session_state.pop("technical_snapshot",None)
-            if loaded_symbol:
-                st.info("El símbolo cambió. Pulsá Consultar precios e indicadores para actualizar el gráfico.")
+            st.session_state.pop("technical_error",None)
+            try:
+                with st.spinner("Actualizando análisis técnico…"):
+                    st.session_state["technical_data"]=_cached_technical_history(current_symbol)
+            except Exception as exc:
+                st.session_state["technical_error"]=str(exc)[:180]
+        elif not current_symbol:
+            st.session_state.pop("technical_data",None)
+            st.session_state.pop("technical_snapshot",None)
+            st.session_state["technical_loaded_symbol"]=""
+        technical_data=st.session_state.get("technical_data")
+        if st.session_state.get("technical_error"):
+            st.warning("No se pudo obtener el historial: "+st.session_state["technical_error"])
         if technical_data is not None and not technical_data.empty:
             st.caption(f"Símbolo consultado: {st.session_state.get('technical_loaded_symbol','')} · cierres ajustados diarios · los indicadores no son señales automáticas de compra o venta.")
             days={"6M":183,"1A":365,"3A":1095,"5A":1827}[selected_window]
@@ -1245,7 +1254,7 @@ elif page=="Asesor IA":
                 "sample_closes":int(len(technical_data)),
                 "scope":"Observación técnica descriptiva, sin predicción ni recomendación"
             }
-            st.caption("Indicadores cargados y disponibles para el próximo análisis IA de este símbolo. Si cambiás de ticker, volvé a consultar el historial.")
+            st.caption("Indicadores disponibles para el Asesor IA. El historial se actualiza al cambiar el símbolo; la ventana sólo modifica la visualización.")
     st.subheader("Asesor IA")
     st.caption("Conversación libre y análisis contextual. Comparar y Simulador también tienen páginas propias.")
     try:
