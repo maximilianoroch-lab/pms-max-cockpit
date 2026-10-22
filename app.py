@@ -1176,8 +1176,10 @@ elif page=="Asesor IA":
                 with st.spinner("Consultando historial..."):
                     st.session_state["technical_data"]=fetch_history(technical_symbol)
                     st.session_state["technical_loaded_symbol"]=technical_symbol.upper().strip()
+                    st.session_state.pop("technical_snapshot",None)
             except Exception as exc:
                 st.session_state.pop("technical_data",None)
+                st.session_state.pop("technical_snapshot",None)
                 st.warning(f"No fue posible obtener un histórico verificable: {exc}")
         technical_data=st.session_state.get("technical_data")
         if technical_data is not None and not technical_data.empty:
@@ -1196,6 +1198,24 @@ elif page=="Asesor IA":
             st.plotly_chart(rsi_fig,width="stretch")
             last=shown.iloc[-1]
             st.caption(f"Cierre ajustado: {last['Close']:.2f} · Distancia EMA 200: {(last['Close']/last['EMA 200']-1)*100:+.1f}% · RSI 14: {last['RSI 14']:.1f} · {shown.index.max():%d/%m/%Y}")
+            # Contexto técnico verificable del símbolo consultado, no del CEDEAR por inferencia.
+            def _technical_number(v):
+                return round(float(v),4) if pd.notna(v) and float(v)>0 else None
+            st.session_state["technical_snapshot"]={
+                "symbol":st.session_state.get("technical_loaded_symbol",""),
+                "source":"Yahoo Finance / yfinance",
+                "as_of":str(shown.index.max().date()),
+                "price_currency":"No verificada: depende del mercado del símbolo consultado",
+                "instrument_match_to_portfolio":"No verificado: no equiparar CEDEAR con acción subyacente",
+                "close_adjusted":_technical_number(last["Close"]),
+                "ema21":_technical_number(last["EMA 21"]),
+                "ema50":_technical_number(last["EMA 50"]),
+                "ema200":_technical_number(last["EMA 200"]),
+                "rsi14":round(float(last["RSI 14"]),2) if pd.notna(last["RSI 14"]) else None,
+                "sample_closes":int(len(technical_data)),
+                "scope":"Observación técnica descriptiva, sin predicción ni recomendación"
+            }
+            st.caption("Estos indicadores se incorporarán como contexto al próximo análisis del Asesor IA. Corresponden exclusivamente al símbolo consultado.")
     st.subheader("Asesor IA")
     st.caption("Conversación libre y análisis contextual. Comparar y Simulador también tienen páginas propias.")
     try:
@@ -1272,6 +1292,6 @@ La clave queda en Streamlit Secrets y no debe subirse a GitHub.
         with st.chat_message("user"): st.markdown(user_prompt)
         with st.chat_message("assistant"):
             with st.spinner("Analizando…"):
-                answer=ask_advisor(user_prompt,data,filtered,st.session_state.messages[-8:],selected_ticker=st.session_state.get("active_ticker",""),analysis_context=st.session_state.get("analysis_context",{}))
+                answer=ask_advisor(user_prompt,data,filtered,st.session_state.messages[-8:],selected_ticker=st.session_state.get("active_ticker",""),analysis_context=st.session_state.get("analysis_context",{}),technical_snapshot=st.session_state.get("technical_snapshot"))
             st.markdown(answer)
         st.session_state.messages.append({"role":"assistant","content":answer})
