@@ -12,10 +12,13 @@ Reglas de esta cartera:
 - GLD: clase Oro, tipo ETF.
 - MELI, VIST y GLOB: Global.
 - YPF/YPFD y GGAL directos: Argentina.
-- Sólo FUT, CASH, GALILEO y SCHROD requieren actualización manual.
+- FUT, CASH, GALILEO y SCHROD pueden requerir actualización manual; AN29, AO28, AO29, GD35, GD38 y GD41 siguen con cotizaciones manuales hasta completar su automatización.
 - Fines de semana/feriados aceptan último valor válido.
 - No uses TWR, XIRR ni Modified Dietz salvo pedido explícito.
 - No trates volatilidad/drawdown/correlaciones como maduras si el PMS marca historial insuficiente.
+- Si hay technical_indicators_requested_symbol, aclarar símbolo exacto, mercado, divisa, fecha del último cierre y fuente Yahoo Finance. Puede NO ser la misma especie que la posición PMS (p. ej. CEDEAR vs acción extranjera).
+- RSI, EMA y distancias porcentuales son descripciones históricas, no recomendaciones ni pronósticos. No construir una conclusión técnica sin datos recibidos, ni inferir datos ausentes.
+- Separar siempre: dato observado, interpretación, hipótesis sin confirmar y dato faltante. Si citas externas no están disponibles, no presentar cifras fundamentales como verificadas.
 Separá claramente:
 1) Datos internos de esta cartera.
 2) Información externa consultada en la web.
@@ -114,7 +117,7 @@ def compact(data,filtered,selected_ticker="",user_prompt=""):
         "exposure":expo.head(20).fillna("").to_dict("records")
     }
 
-def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker="",analysis_context=None):
+def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker="",analysis_context=None,technical_snapshot=None):
     try:
         import streamlit as st
         api_key=st.secrets.get("OPENAI_API_KEY",os.getenv("OPENAI_API_KEY"))
@@ -128,6 +131,8 @@ def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker
     for m in (history or [])[-6:]:
         if m.get("role") in ("user","assistant"):messages.append({"role":m["role"],"content":m["content"]})
     ctx["analysis_context"]=analysis_context or {}
+    if technical_snapshot:
+        ctx["technical_indicators_requested_symbol"]=technical_snapshot
     prompt=(
         "CONTEXTO ACTUAL DEL PMS:\n"+json.dumps(ctx,ensure_ascii=False,default=str)
         +"\n\nCONSULTA:\n"+user_prompt
@@ -183,7 +188,7 @@ def compare_companies_structured(ticker1,ticker2,data,filtered_positions,analysi
         return {"company_a":ticker1.upper(),"company_b":ticker2.upper(),"metrics":[],"analysis":"Falta configurar OPENAI_API_KEY en Streamlit Secrets."}
     ctx=compact(data,filtered_positions,user_prompt=f'{ticker1} {ticker2}')
     ctx["analysis_context"]=analysis_context or {}
-    prompt=f"""Compará {ticker1} contra {ticker2} usando datos fundamentales actuales, homogéneos y verificables.
+    prompt=f"""Compará {ticker1} contra {ticker2} usando datos fundamentales actuales, homogéneos y verificables. Si no existe respaldo suficiente, omití la cifra en lugar de inferirla.
 Primero identificá el sector/tipo de ambas empresas. Mostrá EXCLUSIVAMENTE indicadores relevantes:
 - Empresas no financieras: P/E, Forward P/E, PEG, EV/EBITDA, ROE, ROIC, crecimiento anualizado de ingresos 3-5 años, crecimiento anualizado EPS 3-5 años y Free Cash Flow.
 - Bancos: P/E, Forward P/E, ROE, ROA, crecimiento anualizado de ingresos 3-5 años (sólo si comparable), crecimiento EPS 3-5 años, NIM, morosidad, cobertura de mora, ratio de eficiencia y capital regulatorio.
@@ -191,7 +196,7 @@ Primero identificá el sector/tipo de ambas empresas. Mostrá EXCLUSIVAMENTE ind
 NO incluyas EV/EBITDA, ROIC, PEG o FCF convencional para bancos. NO muestres métricas no pertinentes.
 Si falta un dato, usá null; no inventes. Si ambos valores faltan, omití la métrica.
 Para crecimientos usá CAGR calculada con cifras históricas, no estimaciones sin identificarlas. Preferí series homogéneas. Para métricas % enviá números en puntos porcentuales (12.3 significa 12,3%).
-Usá búsqueda web y fuentes primarias cuando sea posible; indicá fechas y limitaciones de comparabilidad.
+Usá búsqueda web y fuentes primarias cuando sea posible; indicá fechas y limitaciones de comparabilidad. No declares ganador de métrica con períodos, divisas o definiciones no homogéneos. Cada afirmación cuantitativa requiere fecha/fuente identificable; la búsqueda web no garantiza precisión.
 En bullets escribí 4 a 6 puntos breves y contrastantes, con ventajas/desventajas EXPLÍCITAS por ticker; evitá un empate vago.
 En analysis escribí un desarrollo de extensión moderada (aprox 350 a 550 palabras), con riesgos, fortalezas, contexto PMS, balance y conclusión condicionada. No repitas todos los bullets.
 «Favorece» de cada fila es orientación por métrica, no decisión global. Para indicadores bancarios usá las denominaciones estándar y marcá comparable:false si los períodos o definiciones impiden una comparación justa. Explicá en cada fila las métricas no estándar con description breve. No confundas cobertura de mora con garantías.
