@@ -927,20 +927,30 @@ elif page=="Custodia":
     ticker=st.selectbox("Activo",["Todos los activos"]+tickers,key=f"custody_ticker_drill_{cust}_{account}")
     if ticker!="Todos los activos":
         rows=rows[rows["Ticker"].astype(str)==ticker].copy()
-    selected_value=float(rows["Valor USD_num"].sum())
+    # Los filtros de cuenta y activo definen el universo patrimonial seleccionado.
+    # CASH solo se excluye de la tabla de títulos, no del denominador ni del KPI.
+    selected_scope=custody_scope.copy()
+    if account!="Todas las cuentas":
+        selected_scope=selected_scope[selected_scope["Cuenta"].astype(str)==account]
+    if ticker!="Todos los activos":
+        selected_scope=selected_scope[selected_scope["Ticker"].astype(str)==ticker]
+    selected_value=float(selected_scope["Valor USD_num"].sum())
+    selected_invested=float(rows["Valor USD_num"].sum())
     selected_weight=selected_value/position_total if position_total else 0.0
-    st.caption("Detalle filtrado (sin modificar el patrimonio global)")
+    st.caption("Patrimonio seleccionado (sin modificar el patrimonio global)")
     v1,v2,v3=st.columns(3)
     v1.metric("Valor seleccionado",fmt_usd(selected_value))
-    v2.metric("Peso invertido en cartera",fmt_pct(selected_weight))
-    v3.metric("Registros",len(rows))
+    v2.metric("Peso en cartera",fmt_pct(selected_weight))
+    v3.metric("Títulos visibles",len(rows))
+    if ticker=="Todos los activos":
+        st.caption(f"Invertido visible: {fmt_usd(selected_invested)} · CASH incluido en patrimonio seleccionado, no listado como título.")
     if rows.empty:
         st.info("No hay posiciones con estos filtros.")
     if cust=="TODOS":
         st.subheader("Distribución por custodio")
-        # Agrupar por custodio y cuenta: barra apilada. Sólo Criteria se
+        # Agrupar patrimonio completo (incluye CASH) por custodio y cuenta. Sólo Criteria se
         # desglosa visualmente por cuenta; los demás quedan como una barra.
-        chart_data=rows.dropna(subset=["Custodio"]).copy()
+        chart_data=custody_scope.dropna(subset=["Custodio"]).copy()
         chart_data["Custodio"]=chart_data["Custodio"].astype(str)
         chart_data["Cuenta"]=chart_data["Cuenta"].fillna("Sin cuenta").astype(str)
         chart_data["Grupo"]=chart_data.apply(
