@@ -79,7 +79,7 @@ with st.sidebar:
     st.markdown("### Herramientas")
     tool_page=st.radio(
         "Herramientas",
-        ["—","Comparar","Simulador"],
+        ["—","Comparar Activos","Simular Compra/Venta"],
         label_visibility="collapsed",
         key="tools_nav",
         on_change=lambda: st.session_state.pop("force_page",None)
@@ -91,7 +91,7 @@ with st.sidebar:
         st.session_state["tools_nav"]="—"
         st.session_state["force_page"]="Asesor IA"
     if tool_page!="—":
-        page=tool_page
+        page={"Comparar Activos":"Comparar","Simular Compra/Venta":"Simulador"}.get(tool_page,tool_page)
     if st.session_state.get("force_page")=="Asesor IA":
         page="Asesor IA"
     st.divider()
