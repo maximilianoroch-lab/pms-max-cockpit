@@ -1004,6 +1004,22 @@ elif page=="Custodia":
     )
 
 elif page=="Posiciones":
+    with st.expander("Bonos · Data912 (referencia experimental, no afecta patrimonio)",expanded=False):
+        st.caption("Fuente pública sin credenciales. El precio crudo NO indica moneda, unidad nominal ni fecha de mercado verificadas. No se utiliza en las valuaciones.")
+        if st.button("Consultar Data912",key="bond_watchlist_refresh"):
+            try:
+                from bond_watchlist import read_bond_watchlist
+                with st.spinner("Consultando precios de referencia…"):
+                    st.session_state["bond_watchlist_result"]=read_bond_watchlist()
+                st.session_state.pop("bond_watchlist_error",None)
+            except Exception as exc:
+                st.session_state.pop("bond_watchlist_result",None)
+                st.session_state["bond_watchlist_error"]="No se pudo consultar la fuente pública: "+str(exc)[:160]
+        if st.session_state.get("bond_watchlist_error"):
+            st.warning(st.session_state["bond_watchlist_error"])
+        if st.session_state.get("bond_watchlist_result"):
+            st.dataframe(pd.DataFrame(st.session_state["bond_watchlist_result"]),hide_index=True,width="stretch")
+            st.caption("Solo consulta informativa. No equivale a una actualización del PMS.")
     st.caption("Filtros exclusivos de esta tabla. No modifican el patrimonio general ni la actualización.")
     f1,f2,f3=st.columns(3)
     with f1:
