@@ -124,6 +124,45 @@ def compact(data,filtered,selected_ticker="",user_prompt=""):
         "exposure":expo.head(20).fillna("").to_dict("records")
     }
 
+def eligible_technical_snapshot(snapshot, selected_ticker="", mentioned_tickers=None):
+    """Evita mezclar un gráfico cargado para otro ticker en conclusiones IA."""
+    if not isinstance(snapshot,dict):
+        return False
+    symbol=str(snapshot.get("symbol") or "").strip().upper()
+    as_of=str(snapshot.get("as_of") or "").strip()
+    if not symbol or not as_of:
+        return False
+    selected=str(selected_ticker or "").strip().upper()
+    mentioned={str(t).strip().upper() for t in (mentioned_tickers or []) if str(t).strip()}
+    return symbol==selected if selected else mentioned=={symbol}
+
+
+def describe_technical_snapshot(snapshot):
+    """Hechos descriptivos; no señales determinísticas de compra ni venta."""
+    if not isinstance(snapshot,dict): return {}
+    try:
+        close=float(snapshot.get("close_adjusted"))
+        ema21=float(snapshot.get("ema21"))
+        ema50=float(snapshot.get("ema50"))
+        ema200=float(snapshot.get("ema200"))
+        rsi=float(snapshot.get("rsi14"))
+    except (ValueError,TypeError):
+        return {"quality":"INDICADORES_INCOMPLETOS"}
+    import math
+    if not all(math.isfinite(v) for v in (close,ema21,ema50,ema200,rsi)) or min(close,ema21,ema50,ema200)<=0 or not 0<=rsi<=100:
+        return {"quality":"INDICADORES_INVALIDOS"}
+    return {
+        "quality":"OK",
+        "price_vs_ema21_pct":round((close/ema21-1)*100,2),
+        "price_vs_ema50_pct":round((close/ema50-1)*100,2),
+        "price_vs_ema200_pct":round((close/ema200-1)*100,2),
+        "ema21_vs_ema50_pct":round((ema21/ema50-1)*100,2),
+        "ema50_vs_ema200_pct":round((ema50/ema200-1)*100,2),
+        "rsi14":round(rsi,2),
+        "interpretation_scope":"Descriptivo, sujeto al símbolo y cierre informado; no señal de inversión"
+    }
+
+
 def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker="",analysis_context=None,technical_snapshot=None):
     try:
         import streamlit as st
@@ -144,8 +183,9 @@ def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker
         requested=str(selected_ticker or "").upper().strip()
         mentions=[str(t).upper() for t in ctx.get("mentioned_tickers",[])]
         # Evitar trasladar indicadores de un símbolo anterior a otro activo sin advertirlo.
-        if snap_symbol and snap_date and ((requested and snap_symbol==requested) or (not requested and len(mentions)==1 and snap_symbol==mentions[0])):
+        if eligible_technical_snapshot(technical_snapshot,requested,mentions):
             ctx["technical_indicators_requested_symbol"]=technical_snapshot
+            ctx["technical_interpretation_deterministic"]=describe_technical_snapshot(technical_snapshot)
         else:
             ctx["technical_snapshot_excluded_reason"]="Símbolo técnico distinto del ticker activo/consultado; volver a consultar el símbolo deseado."
 
