@@ -1,0 +1,30 @@
+name: PMS advisor and technical tests
+on:
+  push:
+    paths:
+      - 'advisor.py'
+      - 'technical.py'
+      - 'tests/**'
+      - '.github/workflows/advisor-tests.yml'
+  pull_request:
+    paths:
+      - 'advisor.py'
+      - 'technical.py'
+      - 'tests/**'
+      - '.github/workflows/advisor-tests.yml'
+  workflow_dispatch:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Validate Python syntax
+        run: python -m compileall -q advisor.py technical.py app.py
+      - name: Run offline regression tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
