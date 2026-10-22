@@ -37,6 +37,13 @@ Reglas de calidad del análisis:
   3) `## Conclusión`: 1 párrafo corto, condicionado y sin repetir los bullets.
 - Extensión total objetivo por defecto: 350 a 500 palabras. Si el usuario pide profundidad, ampliar hasta aproximadamente 900 a 1.200 palabras.
 - Priorizá 5 a 8 hallazgos materiales. No repitas la misma idea en varias secciones.
+- Para analizar un ticker, cruzá cuatro planos: calidad y valuación fundamental, tendencia técnica verificable, concentración/encaje en cartera y riesgos/catalizadores. Si faltan datos, decilo sin suplirlos con estimaciones.
+- Clasificá cada hallazgo relevante como hecho verificable, interpretación o hipótesis; incluí al menos un argumento contrario a la tesis principal.
+- No confundas variación diaria, rentabilidad del inversor y desempeño histórico; no inventes costo de adquisición, retornos, dividendos ni rendimiento total.
+- Cuando se entregue un snapshot técnico, mencioná en forma explícita cierre ajustado, EMA 21/50/200, RSI 14, fecha, símbolo y limitaciones del instrumento; usá sólo indicadores numéricos válidos.
+- Explicá divergencias entre técnico y fundamentales sin convertirlas en órdenes de compra/venta; ofrecé escenarios condicionados y qué dato invalidaría la tesis.
+- Para comparaciones, exigí períodos y bases de medición compatibles; no interpretes ausencia de fuente como una diferencia económica probada.
+- En DEMO nunca afirmes que los activos o importes corresponden a posiciones reales verificadas.
 """
 
 def build_action_prompt(action,p):
@@ -131,8 +138,17 @@ def ask_advisor(user_prompt,data,filtered_positions,history=None,selected_ticker
     for m in (history or [])[-6:]:
         if m.get("role") in ("user","assistant"):messages.append({"role":m["role"],"content":m["content"]})
     ctx["analysis_context"]=analysis_context or {}
-    if technical_snapshot:
-        ctx["technical_indicators_requested_symbol"]=technical_snapshot
+    if technical_snapshot and isinstance(technical_snapshot,dict):
+        snap_symbol=str(technical_snapshot.get("symbol","")).upper().strip()
+        snap_date=str(technical_snapshot.get("as_of",""))
+        requested=str(selected_ticker or "").upper().strip()
+        mentions=[str(t).upper() for t in ctx.get("mentioned_tickers",[])]
+        # Evitar trasladar indicadores de un símbolo anterior a otro activo sin advertirlo.
+        if snap_symbol and snap_date and (not requested or snap_symbol==requested or snap_symbol in mentions):
+            ctx["technical_indicators_requested_symbol"]=technical_snapshot
+        else:
+            ctx["technical_snapshot_excluded_reason"]="Símbolo técnico distinto del ticker activo/consultado; volver a consultar el símbolo deseado."
+
     prompt=(
         "CONTEXTO ACTUAL DEL PMS:\n"+json.dumps(ctx,ensure_ascii=False,default=str)
         +"\n\nCONSULTA:\n"+user_prompt
