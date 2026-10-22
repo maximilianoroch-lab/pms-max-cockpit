@@ -734,7 +734,8 @@ elif page=="Diversificación":
             texttemplate="%{label}<br>US$ %{value:,.0f}<br>%{percent}",
             hovertemplate="<b>%{label}</b><br>Valor: US$ %{value:,.0f}<br>Peso: %{percent}<extra></extra>"
         )
-        fig.update_layout(height=380,margin=dict(l=10,r=10,t=10,b=10),legend_title_text="")
+        fig.update_layout(height=380,margin=dict(l=10,r=10,t=10,b=10),legend_title_text="",
+                          uniformtext=dict(minsize=15,mode="show"))
         st.plotly_chart(fig,width='stretch')
 
     with d2:
