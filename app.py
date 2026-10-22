@@ -498,6 +498,10 @@ def render_company_comparison(result):
             winner="No comparable: criterios distintos"
         period_a=str(m.get("period_a") or m.get("a_period") or "").strip()
         period_b=str(m.get("period_b") or m.get("b_period") or "").strip()
+        source_a=str(m.get("source_a") or "").strip()
+        source_b=str(m.get("source_b") or "").strip()
+        if not (period_a and period_b and source_a.startswith("https://") and source_b.startswith("https://")):
+            winner="Fuentes o períodos sin verificar"
         if period_a and period_b and period_a!=period_b:
             winner="No comparable: períodos distintos"
         if (va is None or vb is None) and comparable:
@@ -514,6 +518,8 @@ def render_company_comparison(result):
             desc=m.get("description") or "Indicador adicional: interpretar según su definición y comparabilidad."
         if period_a or period_b:
             desc += f" · Período A: {period_a or 'no informado'}; período B: {period_b or 'no informado'}"
+        if source_a.startswith("https://") and source_b.startswith("https://"):
+            desc += " · Fuentes informadas para ambos activos (revisar antes de decidir)"
         rows.append({"Indicador":name,"Descripción":desc,a:fmt(va),b:fmt(vb),"Favorece":winner})
     st.subheader(f"Comparación de fundamentales · {a} vs {b}")
     if rows:
@@ -1176,8 +1182,10 @@ elif page=="Asesor IA":
                 with st.spinner("Consultando historial..."):
                     st.session_state["technical_data"]=fetch_history(technical_symbol)
                     st.session_state["technical_loaded_symbol"]=technical_symbol.upper().strip()
+                    st.session_state.pop("technical_snapshot",None)
             except Exception as exc:
                 st.session_state.pop("technical_data",None)
+                st.session_state.pop("technical_snapshot",None)
                 st.warning(f"No fue posible obtener un histórico verificable: {exc}")
         technical_data=st.session_state.get("technical_data")
         if technical_data is not None and not technical_data.empty:
@@ -1196,6 +1204,24 @@ elif page=="Asesor IA":
             st.plotly_chart(rsi_fig,width="stretch")
             last=shown.iloc[-1]
             st.caption(f"Cierre ajustado: {last['Close']:.2f} · Distancia EMA 200: {(last['Close']/last['EMA 200']-1)*100:+.1f}% · RSI 14: {last['RSI 14']:.1f} · {shown.index.max():%d/%m/%Y}")
+            # Contexto técnico verificable del símbolo consultado, no del CEDEAR por inferencia.
+            def _technical_number(v):
+                return round(float(v),4) if pd.notna(v) and float(v)>0 else None
+            st.session_state["technical_snapshot"]={
+                "symbol":st.session_state.get("technical_loaded_symbol",""),
+                "source":"Yahoo Finance / yfinance",
+                "as_of":str(shown.index.max().date()),
+                "price_currency":"No verificada: depende del mercado del símbolo consultado",
+                "instrument_match_to_portfolio":"No verificado: no equiparar CEDEAR con acción subyacente",
+                "close_adjusted":_technical_number(last["Close"]),
+                "ema21":_technical_number(last["EMA 21"]),
+                "ema50":_technical_number(last["EMA 50"]),
+                "ema200":_technical_number(last["EMA 200"]),
+                "rsi14":round(float(last["RSI 14"]),2) if pd.notna(last["RSI 14"]) else None,
+                "sample_closes":int(len(technical_data)),
+                "scope":"Observación técnica descriptiva, sin predicción ni recomendación"
+            }
+            st.caption("Estos indicadores se incorporarán como contexto al próximo análisis del Asesor IA. Corresponden exclusivamente al símbolo consultado.")
     st.subheader("Asesor IA")
     st.caption("Conversación libre y análisis contextual. Comparar y Simulador también tienen páginas propias.")
     try:
@@ -1272,6 +1298,6 @@ La clave queda en Streamlit Secrets y no debe subirse a GitHub.
         with st.chat_message("user"): st.markdown(user_prompt)
         with st.chat_message("assistant"):
             with st.spinner("Analizando…"):
-                answer=ask_advisor(user_prompt,data,filtered,st.session_state.messages[-8:],selected_ticker=st.session_state.get("active_ticker",""),analysis_context=st.session_state.get("analysis_context",{}))
+                answer=ask_advisor(user_prompt,data,filtered,st.session_state.messages[-8:],selected_ticker=st.session_state.get("active_ticker",""),analysis_context=st.session_state.get("analysis_context",{}),technical_snapshot=st.session_state.get("technical_snapshot"))
             st.markdown(answer)
         st.session_state.messages.append({"role":"assistant","content":answer})
