@@ -13,6 +13,20 @@ class SharedUI(unittest.TestCase):
   self.assertEqual(f.layout["barcornerradius"],5)
   self.assertEqual(f.trace["marker_line_width"],1.6)
   self.assertEqual(f.y["categoryorder"],"total ascending")
+ def test_shared_table_and_card(self):
+  from pms_shared_ui import render_financial_table,render_kpi_card
+  class FakeStreamlit:
+   def dataframe(self,frame,**kwargs):
+    self.table_kwargs=kwargs
+    return "table"
+   def markdown(self,value,**kwargs):
+    self.card_markup=value
+    return "card"
+  fake=FakeStreamlit()
+  self.assertEqual(render_financial_table(fake,[1,2]),"table")
+  self.assertTrue(fake.table_kwargs["hide_index"])
+  self.assertEqual(render_kpi_card(fake,"Test","US$ 10","<example>"),"card")
+  self.assertIn("&lt;example&gt;",fake.card_markup)
  def test_format(self):
   self.assertEqual(fmt_usd(1234567),"US$ 1.234.567")
   self.assertEqual(fmt_pct_fraction(.1234),"12,3%")
