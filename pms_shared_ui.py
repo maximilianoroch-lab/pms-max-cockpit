@@ -11,8 +11,23 @@ def style_bar(fig, horizontal=True):
         fig.update_xaxes(gridcolor="rgba(170,193,214,0.12)", zeroline=False)
     return fig
 
-def fmt_usd(value):
-    return "US$ " + f"{float(value):,.0f}".replace(",", ".")
+def fmt_number(value, decimals=0):
+    import math
+    try:
+        n=float(value)
+        if not math.isfinite(n):
+            return "—"
+        return f"{n:,.{decimals}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except (TypeError,ValueError,OverflowError):
+        return "—"
 
-def fmt_pct_fraction(value):
-    return f"{float(value)*100:.1f}%".replace(".", ",")
+def fmt_usd(value):
+    formatted=fmt_number(value)
+    return "US$ "+formatted if formatted!="—" else formatted
+
+def fmt_pct_fraction(value, decimals=1):
+    try:
+        return fmt_number(float(value)*100,decimals)+"%" 
+    except (TypeError,ValueError,OverflowError):
+        return "—"
+
