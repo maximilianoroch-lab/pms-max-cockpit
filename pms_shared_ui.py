@@ -27,7 +27,8 @@ def fmt_usd(value):
 
 def fmt_pct_fraction(value, decimals=1):
     try:
-        return fmt_number(float(value)*100,decimals)+"%" 
+        formatted=fmt_number(float(value)*100,decimals)
+        return formatted+"%" if formatted!="—" else "—" 
     except (TypeError,ValueError,OverflowError):
         return "—"
 
