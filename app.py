@@ -1,4 +1,4 @@
-from pms_shared_ui import style_bar as shared_style_bar
+from pms_shared_ui import style_bar as shared_style_bar, fmt_usd as shared_fmt_usd, fmt_pct_fraction as shared_fmt_pct, fmt_number as shared_fmt_number
 
 import streamlit as st
 import pandas as pd
