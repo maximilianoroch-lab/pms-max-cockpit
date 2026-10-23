@@ -31,3 +31,16 @@ def fmt_pct_fraction(value, decimals=1):
     except (TypeError,ValueError,OverflowError):
         return "—"
 
+
+def render_financial_table(st, frame, *, row_height=36):
+    """Uniform financial table for the two cockpit adapters."""
+    return st.dataframe(frame, hide_index=True, width="stretch", row_height=row_height)
+
+def render_kpi_card(st, label, value, sub=""):
+    """Escaped labels prevent markup injection from external portfolio data."""
+    from html import escape
+    return st.markdown(
+        '<div class="demo-card"><div class="demo-label">'+escape(str(label))+
+        '</div><div class="demo-value">'+escape(str(value))+
+        '</div><div class="demo-small">'+escape(str(sub))+'</div></div>',
+        unsafe_allow_html=True)
