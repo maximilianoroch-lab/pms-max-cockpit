@@ -29,6 +29,13 @@ class SharedUI(unittest.TestCase):
   self.assertTrue(fake.table_kwargs["hide_index"])
   self.assertEqual(render_kpi_card(fake,"Test","US$ 10","<example>"),"card")
   self.assertIn("&lt;example&gt;",fake.card_markup)
+ def test_executive_bar(self):
+  from pms_shared_ui import finish_executive_bar
+  f=StubFigure()
+  self.assertIs(finish_executive_bar(f,stacked=True),f)
+  self.assertEqual(f.layout["bargap"],0.38)
+  self.assertEqual(f.layout["legend"]["orientation"],"h")
+  self.assertEqual(f.x["gridcolor"],"rgba(145,173,197,0.09)")
  def test_format(self):
   self.assertEqual(fmt_usd(1234567),"US$ 1.234.567")
   self.assertEqual(fmt_pct_fraction(.1234),"12,3%")
