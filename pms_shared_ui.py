@@ -69,9 +69,10 @@ def finish_executive_bar(fig, *, stacked=False):
         font=dict(family="Arial, sans-serif",size=13,color="#dce6f2"),
         hoverlabel=dict(bgcolor="#10263b",bordercolor="#56738d",
                         font=dict(family="Arial, sans-serif",size=13,color="#f2f6fb")),
-        bargap=0.38 if stacked else 0.51,
-        barcornerradius=5,
-        legend=dict(orientation="h",yanchor="top",y=-0.13,xanchor="left",x=0,
+        bargap=0.31 if stacked else 0.43,
+        barcornerradius=7,
+        margin=dict(l=12,r=100,t=24,b=76 if stacked else 38),
+        legend=dict(orientation="h",yanchor="top",y=-0.19,xanchor="left",x=0,
                     bgcolor="rgba(0,0,0,0)",font=dict(size=11,color="#b8c9da"),
                     title=dict(text="")),
     )
