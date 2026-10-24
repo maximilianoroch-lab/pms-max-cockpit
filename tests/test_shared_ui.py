@@ -33,8 +33,10 @@ class SharedUI(unittest.TestCase):
   from pms_shared_ui import finish_executive_bar
   f=StubFigure()
   self.assertIs(finish_executive_bar(f,stacked=True),f)
-  self.assertEqual(f.layout["bargap"],0.38)
+  self.assertEqual(f.layout["bargap"],0.31)
   self.assertEqual(f.layout["legend"]["orientation"],"h")
+  self.assertEqual(f.layout["margin"]["b"],76)
+  self.assertEqual(f.layout["barcornerradius"],7)
   self.assertEqual(f.x["gridcolor"],"rgba(145,173,197,0.09)")
  def test_format(self):
   self.assertEqual(fmt_usd(1234567),"US$ 1.234.567")
