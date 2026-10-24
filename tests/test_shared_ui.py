@@ -10,9 +10,11 @@ class SharedUI(unittest.TestCase):
  def test_bar_style(self):
   f=StubFigure()
   self.assertIs(style_bar(f),f)
-  self.assertEqual(f.layout["barcornerradius"],5)
-  self.assertEqual(f.trace["marker_line_width"],1.6)
+  self.assertEqual(f.layout["barcornerradius"],6)
+  self.assertEqual(f.trace["marker_line_width"],1.2)
   self.assertEqual(f.y["categoryorder"],"total ascending")
+  self.assertEqual(f.layout["bargap"],0.48)
+  self.assertEqual(f.x["gridcolor"],"rgba(160,191,220,0.09)")
  def test_shared_table_and_card(self):
   from pms_shared_ui import render_financial_table,render_kpi_card
   class FakeStreamlit:
