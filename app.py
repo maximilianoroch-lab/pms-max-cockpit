@@ -791,12 +791,21 @@ elif page=="Evolución":
         snap_show["Cambio %"]=raw_pct.map(lambda v:signed_number(v,percentage=True))
         snapshot_style=snap_show[["Fecha","Patrimonio USD","Cambio USD","Cambio %"]].style.apply(lambda _: [signed_color(x) for x in raw_usd],subset=["Cambio USD"],axis=0).apply(lambda _: [signed_color(x) for x in raw_pct],subset=["Cambio %"],axis=0)
         st.dataframe(snapshot_style,hide_index=True,width="stretch")
-    evo=data["dashboard_evolucion_v2"].copy()
-    hist=evo[evo["Valor total USD_num"].gt(0)].copy()
-    fig=px.line(hist,x="Fecha",y="Valor total USD_num",markers=True,labels={"Valor total USD_num":"Patrimonio USD"})
+    # Serie cronológica completa de cierres observados, sin inferir días intermedios.
+    if not snaps.empty and "Fecha orden" in snaps.columns:
+        hist=snaps[["Fecha orden","Valor total USD_num"]].copy()
+    else:
+        evo=data["dashboard_evolucion_v2"].copy()
+        evo["Fecha orden"]=pd.to_datetime(evo["Fecha"],dayfirst=True,errors="coerce",format="mixed")
+        hist=evo[["Fecha orden","Valor total USD_num"]].dropna(subset=["Fecha orden"])
+    hist=hist.loc[hist["Valor total USD_num"].gt(0)].sort_values("Fecha orden")
+    hist=hist.drop_duplicates("Fecha orden",keep="last")
+    fig=px.line(hist,x="Fecha orden",y="Valor total USD_num",markers=True,
+                labels={"Fecha orden":"Fecha","Valor total USD_num":"Patrimonio USD"})
+    fig.update_layout(height=420,margin=dict(l=10,r=10,t=15,b=15))
     st.plotly_chart(fig,width='stretch')
-    st.caption("Patrimonio observado; todavía no se interpreta como retorno. Evolución queda pendiente de una versión más dinámica y representativa.")
-    st.subheader("Top 15 activos")
+    st.caption(f'{len(hist)} cierres reales disponibles · sin interpolar fechas faltantes. La variación patrimonial no equivale a rentabilidad.')
+    st.subheader("Variación diaria · 15 principales activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
     top["Cotización"]=top.apply(quote_text,axis=1)
