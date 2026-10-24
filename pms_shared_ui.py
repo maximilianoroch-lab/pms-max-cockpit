@@ -1,14 +1,29 @@
 """PMS shared visual primitives — same source in Bersoch and DEMO."""
 def style_bar(fig, horizontal=True):
-    """Compact financial bar chart, transparent background and consistent axes."""
-    fig.update_traces(marker_line_width=1.6, marker_line_color="rgba(231,240,250,0.52)", opacity=0.96)
+    """PMS Executive: restrained financial bars, consistent in both cockpits."""
+    fig.update_traces(
+        marker_line_width=1.2,
+        marker_line_color="rgba(185,218,242,0.58)",
+        opacity=0.96,
+        textfont=dict(size=13,color="#e6eef8"),
+        hoverlabel=dict(bgcolor="#13263c",font_size=13),
+    )
     fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font_color="#dce6f2", bargap=0.42, barcornerradius=5,
-        margin=dict(l=8,r=46,t=12,b=12), legend_title_text="")
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#dce6f2",size=13),
+        bargap=0.48,
+        barcornerradius=6,
+        margin=dict(l=8,r=64,t=14,b=22),
+        legend_title_text="",
+        legend=dict(bgcolor="rgba(0,0,0,0)",font=dict(size=12)),
+        hovermode="closest",
+    )
     if horizontal:
-        fig.update_yaxes(title_text=None, showgrid=False, categoryorder="total ascending")
-        fig.update_xaxes(gridcolor="rgba(170,193,214,0.12)", zeroline=False)
+        fig.update_yaxes(title_text=None,showgrid=False,categoryorder="total ascending",
+                         ticks="",tickfont=dict(size=13,color="#dce6f2"))
+        fig.update_xaxes(gridcolor="rgba(160,191,220,0.09)",gridwidth=1,
+                         zeroline=False,ticks="",tickfont=dict(size=11,color="#9baec2"))
     return fig
 
 def fmt_number(value, decimals=0):
