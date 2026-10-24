@@ -642,9 +642,10 @@ if page=="Resumen":
 elif page=="Diversificación":
     render_global_context_banner()
     ex=data["dashboard_exposicion_v2"].copy()
+    st.caption("EXPOSICIÓN PATRIMONIAL  ·  composición por región y sector  ·  barras proporcionales en USD")
     c1,c2=st.columns(2)
     with c1:
-        st.markdown("### Región")
+        st.markdown("### Distribución geográfica")
         r=ex[["Región","Valor USD_num","Peso_num"]].dropna(subset=["Región"]).sort_values("Valor USD_num",ascending=True)
         r["Etiqueta"]=r["Peso_num"].map(lambda v:f"{v*100:.1f}%".replace(".",","))
         fig=px.bar(
@@ -665,7 +666,7 @@ elif page=="Diversificación":
                 set_context("Región",pts[0].get("y"))
         except Exception: pass
     with c2:
-        st.markdown("### Sector")
+        st.markdown("### Distribución sectorial")
         s=ex[["Sector","Sector Valor USD_num","Sector Peso_num"]].dropna(subset=["Sector"]).sort_values("Sector Valor USD_num",ascending=True)
         s["Etiqueta"]=s["Sector Peso_num"].map(lambda v:f"{v*100:.1f}%".replace(".",","))
         fig=px.bar(
@@ -900,6 +901,7 @@ elif page=="Custodia":
     # Controles internos; sin exponer umbrales ni auditorias en el dashboard.
     st.session_state["_custody_integrity_ok"]=bool(abs(difference)<=max(0.10,position_total*0.000001) and position_count==cust_count and ticker_issues.empty)
     st.session_state["_cash_integrity_ok"]=bool(cash_cut>0 and cash_gap<=0.02)
+    st.caption("CUSTODIA  ·  concentración por intermediario y detalle por cuenta")
     cust_options=["TODOS"]+sorted(detail_visible["Custodio"].dropna().astype(str).unique().tolist())
     cust=st.selectbox("Custodio",cust_options,index=0)
 
