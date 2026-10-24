@@ -60,7 +60,7 @@ def apply_analysis_context(df):
     dim,val=ctx.get("dimension",""),ctx.get("value","")
     if df is None or df.empty or not val:
         return df
-    colmap={"Región":"Región directa","Sector":"Sector directo","Custodio":"Custodio","Clase":"Clase","Tipo":"Tipo"}
+    colmap={"Región":"Región directa","Sector":"Sector directo","Custodio":"Custodio","Tipo":"Tipo"}
     col=colmap.get(dim)
     if col and col in df.columns:
         return df[df[col].astype(str)==str(val)].copy()
@@ -338,7 +338,7 @@ def render_active_context():
     c4.metric("Variación",fmt_pct(snap["Variación"]),delta=None)
     # El valor destacado cambia de color según su signo mediante HTML.
     st.markdown(f'<div class="{("up" if snap["Variación"]>0 else "down" if snap["Variación"]<0 else "flat")}">{change_html(snap["Variación"])}</div>',unsafe_allow_html=True)
-    st.caption(f'{snap["Clase"]} · {snap["Tipo"]} · {snap["Región"]} · {snap["Sector"]} · Custodio(s): {snap["Custodios"] or "—"} · Cuenta(s): {snap["Cuentas"] or "—"}')
+    st.caption(f'{snap["Tipo"]} · {snap["Región"]} · {snap["Sector"]} · Custodio(s): {snap["Custodios"] or "—"} · Cuenta(s): {snap["Cuentas"] or "—"}')
 
 
 def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker=None, cash_amount=0.0):
@@ -690,7 +690,7 @@ elif page=="Diversificación":
     if not detail.empty and st.session_state.get("analysis_context",{}).get("value"):
         st.subheader("Posiciones directas dentro del contexto")
         st.caption("El gráfico de exposición puede incluir ETF look-through agregado; esta tabla muestra posiciones directas y por eso puede no reconciliar 1:1 con el gráfico.")
-        detail_show=detail.sort_values("Valor USD_num",ascending=False)[["Ticker","Nombre","Custodio","Cuenta","Clase","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num"]].copy()
+        detail_show=detail.sort_values("Valor USD_num",ascending=False)[["Ticker","Nombre","Custodio","Cuenta","Tipo","Región directa","Sector directo","Valor USD_num","Peso cartera_num"]].copy()
         detail_show["Peso cartera_num"]=pct_points(detail_show["Peso cartera_num"])
         st.dataframe(
             detail_show,
@@ -997,7 +997,7 @@ elif page=="Custodia":
             style_bar(fig)
             finish_executive_bar(fig,stacked=True)
             st.plotly_chart(fig,width='stretch')
-    rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Cantidad_num","Valor USD_num","Peso custodio_num"]].copy()
+    rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Cantidad_num","Valor USD_num","Peso custodio_num"]].copy()
     rows_show["Cantidad_num"]=rows_show["Cantidad_num"].map(lambda x:fmt_num(x,0) if float(x).is_integer() else fmt_num(x,4))
     rows_show["Peso custodio_num"]=pct_points(rows_show["Peso custodio_num"])
     st.dataframe(
