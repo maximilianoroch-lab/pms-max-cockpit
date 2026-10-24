@@ -658,7 +658,7 @@ elif page=="Diversificación":
         fig.update_traces(textposition="outside",cliponaxis=False,textfont_size=13,
                           customdata=r[["Región"]].to_numpy(),
                           hovertemplate="<b>Región: %{y}</b><br>Monto: US$ %{x:,.0f}<extra></extra>")
-        fig.update_layout(yaxis_title=None,margin=dict(l=8,r=70,t=12,b=12))
+        fig.update_layout(yaxis_title=None,margin=dict(l=14,r=96,t=24,b=44),height=390)
         ev=st.plotly_chart(fig,width='stretch',on_select="rerun",selection_mode="points",key="region_chart")
         try:
             pts=ev.selection.points
@@ -980,7 +980,7 @@ elif page=="Custodia":
             finish_executive_bar(fig,stacked=True)
             fig.update_yaxes(categoryorder="array",categoryarray=cust_totals.index.tolist()[::-1])
             fig.update_layout(barmode="stack",height=max(300,65*len(cust_totals)+100),
-                margin=dict(l=10,r=10,t=10,b=10),legend_title_text="Cuenta / custodio")
+                margin=dict(l=15,r=34,t=24,b=115),legend_title_text="")
             st.plotly_chart(fig,width='stretch')
         else:
             st.info("No hay valores por custodio para graficar.")
