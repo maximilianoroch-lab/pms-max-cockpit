@@ -73,7 +73,7 @@ def finish_executive_bar(fig, *, stacked=False):
         barcornerradius=5,
         legend=dict(orientation="h",yanchor="top",y=-0.13,xanchor="left",x=0,
                     bgcolor="rgba(0,0,0,0)",font=dict(size=11,color="#b8c9da"),
-                    title_text=""),
+                    title=dict(text="")),
     )
     fig.update_xaxes(showline=False,zeroline=False,showgrid=True,
         gridcolor="rgba(145,173,197,0.09)",ticks="",tickfont=dict(size=11,color="#91a7bc"),
