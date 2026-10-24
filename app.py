@@ -1,4 +1,4 @@
-from pms_shared_ui import style_bar as shared_style_bar, fmt_usd as shared_fmt_usd, fmt_pct_fraction as shared_fmt_pct, fmt_number as shared_fmt_number
+from pms_shared_ui import style_bar as shared_style_bar, fmt_usd as shared_fmt_usd, fmt_pct_fraction as shared_fmt_pct, fmt_number as shared_fmt_number, finish_executive_bar
 
 import streamlit as st
 import pandas as pd
@@ -653,6 +653,7 @@ elif page=="Diversificación":
             color_discrete_sequence=["#79bff2"]
         )
         style_bar(fig)
+        finish_executive_bar(fig)
         fig.update_traces(textposition="outside",cliponaxis=False,textfont_size=13,
                           customdata=r[["Región"]].to_numpy(),
                           hovertemplate="<b>Región: %{y}</b><br>Monto: US$ %{x:,.0f}<extra></extra>")
@@ -673,6 +674,7 @@ elif page=="Diversificación":
             color_discrete_sequence=["#4f8fc7"]
         )
         style_bar(fig)
+        finish_executive_bar(fig)
         fig.update_traces(textposition="outside",cliponaxis=False,textfont_size=13,
                           hovertemplate="<b>Sector: %{y}</b><br>Monto: US$ %{x:,.0f}<extra></extra>")
         fig.update_layout(yaxis_title=None,margin=dict(l=8,r=70,t=12,b=12))
@@ -973,6 +975,7 @@ elif page=="Custodia":
                 color_discrete_map={g:("#CDD2D9" if str(g).upper().endswith(("4666","1234")) else "#747D89") if str(c).strip().upper()=="CRITERIA" else custodian_color(c) for c,g in chart_data[["Custodio","Grupo"]].itertuples(index=False,name=None)}
             )
             style_bar(fig)
+            finish_executive_bar(fig,stacked=True)
             fig.update_yaxes(categoryorder="array",categoryarray=cust_totals.index.tolist()[::-1])
             fig.update_layout(barmode="stack",height=max(300,65*len(cust_totals)+100),
                 margin=dict(l=10,r=10,t=10,b=10),legend_title_text="Cuenta / custodio")
@@ -990,6 +993,7 @@ elif page=="Custodia":
                 labels={"Valor USD_num":"Valor USD"}
             )
             style_bar(fig)
+            finish_executive_bar(fig,stacked=True)
             st.plotly_chart(fig,width='stretch')
     rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Clase","Cantidad_num","Valor USD_num","Peso custodio_num"]].copy()
     rows_show["Cantidad_num"]=rows_show["Cantidad_num"].map(lambda x:fmt_num(x,0) if float(x).is_integer() else fmt_num(x,4))
