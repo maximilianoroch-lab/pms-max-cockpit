@@ -60,3 +60,24 @@ def render_kpi_card(st, label, value, sub=""):
         '</div><div class="demo-value">'+escape(str(value))+
         '</div><div class="demo-small">'+escape(str(sub))+'</div></div>',
         unsafe_allow_html=True)
+
+def finish_executive_bar(fig, *, stacked=False):
+    """Final pass for corporate diversification and custody charts."""
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Arial, sans-serif",size=13,color="#dce6f2"),
+        hoverlabel=dict(bgcolor="#10263b",bordercolor="#56738d",
+                        font=dict(family="Arial, sans-serif",size=13,color="#f2f6fb")),
+        bargap=0.38 if stacked else 0.51,
+        barcornerradius=5,
+        legend=dict(orientation="h",yanchor="top",y=-0.13,xanchor="left",x=0,
+                    bgcolor="rgba(0,0,0,0)",font=dict(size=11,color="#b8c9da"),
+                    title_text=""),
+    )
+    fig.update_xaxes(showline=False,zeroline=False,showgrid=True,
+        gridcolor="rgba(145,173,197,0.09)",ticks="",tickfont=dict(size=11,color="#91a7bc"),
+        title_font=dict(size=11,color="#a9c0d5"))
+    fig.update_yaxes(showgrid=False,showline=False,ticks="",
+        tickfont=dict(size=13,color="#e9f1f9"),title_text=None)
+    return fig
