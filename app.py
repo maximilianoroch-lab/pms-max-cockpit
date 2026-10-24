@@ -803,6 +803,7 @@ elif page=="Evolución":
     fig=px.line(hist,x="Fecha orden",y="Valor total USD_num",markers=True,
                 labels={"Fecha orden":"Fecha","Valor total USD_num":"Patrimonio USD"})
     fig.update_layout(height=420,margin=dict(l=10,r=10,t=15,b=15))
+    fig.update_yaxes(range=[200000,350000],tick0=200000,dtick=25000,autorange=False)
     st.plotly_chart(fig,width='stretch')
     st.caption(f'{len(hist)} cierres reales disponibles · sin interpolar fechas faltantes. La variación patrimonial no equivale a rentabilidad.')
     st.subheader("Variación diaria · 15 principales activos")
