@@ -577,13 +577,12 @@ if page=="Resumen":
             # Criterio económico: fondos y oro clasificados como ETF; FUT suma en Cripto.
             kinds=source["Tipo"].fillna("").astype(str).str.strip().str.lower()
             tickers=source["Ticker"].fillna("").astype(str).str.upper()
-            classes=source["Clase"].fillna("").astype(str).str.lower() if "Clase" in source else pd.Series("",index=source.index)
             source["Grupo"]=kinds.map({
                 "cedear":"Cedear","acción ar":"Acción AR","accion ar":"Acción AR",
                 "etf":"ETF","bono ar":"Soberanos","cripto":"Cripto","derivado":"Cripto"
             })
             source.loc[tickers.eq("FUT"),"Grupo"]="Cripto"
-            source.loc[kinds.str.contains("fondo|fci|mutual",regex=True)|classes.eq("oro"),"Grupo"]="ETF"
+            source.loc[kinds.str.contains("fondo|fci|mutual|oro|gold",regex=True)|tickers.eq("GLD"),"Grupo"]="ETF"
             order=["Cedear","Acción AR","ETF","Cripto","Soberanos"]
             unknown=source.loc[source["Grupo"].isna() & ~tickers.eq("CASH")]
             if not unknown.empty:
