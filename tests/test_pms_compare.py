@@ -1,0 +1,34 @@
+import unittest
+import pandas as pd
+from pms_compare import compare_portfolio_positions
+
+class PortfolioComparisonTests(unittest.TestCase):
+    def setUp(self):
+        self.positions=pd.DataFrame({
+            "Ticker":["AAPL","AAPL","SPY","CASH"],
+            "Tipo":["Cedear","Cedear","ETF","Cash"],
+            "Cantidad":[2,3,4,100],
+            "Valor USD_num":[20,30,80,100]})
+    def test_aggregates_multiple_accounts(self):
+        result=compare_portfolio_positions(self.positions,"aapl","SPY")
+        row=result.set_index("Ticker").loc["AAPL"]
+        self.assertEqual(row["Valor USD"],50)
+        self.assertEqual(row["Cantidad"],5)
+        self.assertAlmostEqual(row["Peso cartera"],50/230)
+        self.assertEqual(row["Tipo"],"Cedear")
+    def test_does_not_mix_external_portfolio(self):
+        result=compare_portfolio_positions(self.positions,"AAPL","SPY")
+        self.assertEqual(set(result["Ticker"]),{"AAPL","SPY"})
+    def test_rejects_same_or_missing_instrument(self):
+        for a,b in [("AAPL","AAPL"),("AAPL","TSLA")]:
+            with self.assertRaises(ValueError):
+                compare_portfolio_positions(self.positions,a,b)
+    def test_rejects_invalid_valuation(self):
+        bad=self.positions.copy()
+        bad.loc[0,"Valor USD_num"]=-2
+        with self.assertRaises(ValueError):
+            compare_portfolio_positions(bad,"AAPL","SPY")
+    def test_rejects_total_smaller_than_holdings(self):
+        with self.assertRaises(ValueError):
+            compare_portfolio_positions(self.positions,"AAPL","SPY",100)
+if __name__=="__main__":unittest.main()
