@@ -1087,6 +1087,27 @@ elif page=="Posiciones":
 
 
 elif page=="Comparar":
+    st.subheader("Comparación patrimonial")
+    st.caption("Valores y pesos de dos instrumentos de la cartera Bersoch; sin mezclar fuentes con DEMO.")
+    _cmp_positions=data.get("app_feed_v2",pd.DataFrame()).copy()
+    if {"Ticker","Valor USD_num"}.issubset(_cmp_positions.columns):
+        _cmp_options=sorted(set(_cmp_positions["Ticker"].dropna().astype(str))-{"CASH"})
+        if len(_cmp_options)>1:
+            _cmp_a,_cmp_b=st.columns(2)
+            _cmp_left=_cmp_a.selectbox("Posición A",_cmp_options,key="bersoch_cmp_port_a")
+            _cmp_right=_cmp_b.selectbox("Posición B",_cmp_options,index=1,key="bersoch_cmp_port_b")
+            if _cmp_left==_cmp_right:
+                st.warning("Seleccioná instrumentos diferentes.")
+            else:
+                from pms_compare import compare_portfolio_positions
+                _cmp_total=float(_cmp_positions["Valor USD_num"].sum())
+                _cmp_result=compare_portfolio_positions(_cmp_positions,_cmp_left,_cmp_right,_cmp_total)
+                _cmp_result["Valor USD"]=_cmp_result["Valor USD"].map(fmt_usd)
+                _cmp_result["Peso cartera"]=_cmp_result["Peso cartera"].map(fmt_pct)
+                st.dataframe(_cmp_result[["Ticker","Tipo","Valor USD","Peso cartera"]],hide_index=True,width="stretch")
+        else:
+            st.info("Se necesitan al menos dos posiciones para comparar.")
+    st.divider()
     st.subheader("Comparar de empresas")
     st.caption("Herramienta analítica independiente del chat. Usa datos externos actuales y contexto de PMS Bersoch.")
     render_active_context()
