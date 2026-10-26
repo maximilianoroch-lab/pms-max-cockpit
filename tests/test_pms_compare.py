@@ -20,7 +20,7 @@ class PortfolioComparisonTests(unittest.TestCase):
         result=compare_portfolio_positions(self.positions,"AAPL","SPY")
         self.assertEqual(set(result["Ticker"]),{"AAPL","SPY"})
     def test_rejects_same_or_missing_instrument(self):
-        for a,b in [("AAPL","AAPL"),("AAPL","TSLA")]:
+        for a,b in [("AAPL","AAPL"),("aapl","AAPL"),("AAPL","TSLA")]:
             with self.assertRaises(ValueError):
                 compare_portfolio_positions(self.positions,a,b)
     def test_rejects_invalid_valuation(self):
@@ -28,6 +28,11 @@ class PortfolioComparisonTests(unittest.TestCase):
         bad.loc[0,"Valor USD_num"]=-2
         with self.assertRaises(ValueError):
             compare_portfolio_positions(bad,"AAPL","SPY")
+    def test_rejects_infinite_valuation(self):
+        invalid=self.positions.copy()
+        invalid.loc[0,"Valor USD_num"]=float("inf")
+        with self.assertRaises(ValueError):
+            compare_portfolio_positions(invalid,"AAPL","SPY")
     def test_rejects_total_smaller_than_holdings(self):
         with self.assertRaises(ValueError):
             compare_portfolio_positions(self.positions,"AAPL","SPY",100)
