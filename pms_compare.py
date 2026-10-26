@@ -3,9 +3,11 @@
 No network, prices, company fundamentals or portfolio-specific source assumptions.
 """
 import pandas as pd
+import math
 
 def compare_portfolio_positions(positions, left, right, total=None):
-    if not left or not right or left==right:
+    a,b=str(left or "").upper().strip(),str(right or "").upper().strip()
+    if not a or not b or a==b:
         raise ValueError("Seleccioná dos instrumentos distintos")
     required={"Ticker","Valor USD_num"}
     if not required.issubset(positions.columns):
@@ -13,14 +15,13 @@ def compare_portfolio_positions(positions, left, right, total=None):
     frame=positions.copy()
     frame["Ticker"]=frame["Ticker"].astype(str).str.upper().str.strip()
     frame["Valor USD_num"]=pd.to_numeric(frame["Valor USD_num"],errors="raise")
-    if frame["Valor USD_num"].isna().any() or (frame["Valor USD_num"]<0).any():
+    if not frame["Valor USD_num"].map(math.isfinite).all() or (frame["Valor USD_num"]<0).any():
         raise ValueError("Valor de posición inválido")
     values=frame.groupby("Ticker")["Valor USD_num"].sum()
-    a,b=left.upper().strip(),right.upper().strip()
     if a not in values or b not in values:
         raise ValueError("El instrumento no pertenece a la cartera")
     if total is None:total=float(values.sum())
-    if not pd.notna(total) or float(total)<=0:
+    if not math.isfinite(float(total)) or float(total)<=0:
         raise ValueError("El patrimonio debe ser positivo")
     total=float(total)
     if values.sum()>total+max(0.02,total*1e-6):
