@@ -1,0 +1,39 @@
+"""Pure portfolio-position comparison shared by Bersoch and DEMO.
+
+No network, prices, company fundamentals or portfolio-specific source assumptions.
+"""
+import pandas as pd
+
+def compare_portfolio_positions(positions, left, right, total=None):
+    if not left or not right or left==right:
+        raise ValueError("Seleccioná dos instrumentos distintos")
+    required={"Ticker","Valor USD_num"}
+    if not required.issubset(positions.columns):
+        raise ValueError("Faltan columnas de cartera para comparar")
+    frame=positions.copy()
+    frame["Ticker"]=frame["Ticker"].astype(str).str.upper().str.strip()
+    frame["Valor USD_num"]=pd.to_numeric(frame["Valor USD_num"],errors="raise")
+    if frame["Valor USD_num"].isna().any() or (frame["Valor USD_num"]<0).any():
+        raise ValueError("Valor de posición inválido")
+    values=frame.groupby("Ticker")["Valor USD_num"].sum()
+    a,b=left.upper().strip(),right.upper().strip()
+    if a not in values or b not in values:
+        raise ValueError("El instrumento no pertenece a la cartera")
+    if total is None:total=float(values.sum())
+    if not pd.notna(total) or float(total)<=0:
+        raise ValueError("El patrimonio debe ser positivo")
+    total=float(total)
+    if values.sum()>total+max(0.02,total*1e-6):
+        raise ValueError("El detalle supera el patrimonio suministrado")
+    result=[]
+    for ticker in (a,b):
+        sub=frame.loc[frame["Ticker"]==ticker]
+        val=float(values[ticker])
+        quantity=float(pd.to_numeric(sub["Cantidad"],errors="coerce").sum()) if "Cantidad" in sub else None
+        entry={"Ticker":ticker,"Valor USD":val,"Peso cartera":val/total,
+               "Tipo":str(sub["Tipo"].dropna().iloc[0]) if "Tipo" in sub and sub["Tipo"].notna().any() else "—"}
+        if quantity is not None and quantity>0:
+            entry["Cantidad"]=quantity
+            entry["Precio medio USD"]=val/quantity
+        result.append(entry)
+    return pd.DataFrame(result)
