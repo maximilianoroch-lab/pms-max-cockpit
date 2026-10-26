@@ -352,6 +352,15 @@ def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker
     current=holdings.get(ticker,0.0)
     cash_before=holdings.get("CASH",0.0)
     amount=float(amount)
+    import math
+    if not math.isfinite(amount) or any(not math.isfinite(v) or v<0 for v in holdings.values()):
+        return {"error":"Importes no finitos o posiciones inválidas; no es seguro simular."}
+    if operation not in ("Comprar","Vender"):
+        return {"error":"Operación no válida."}
+    if operation=="Comprar" and funding_mode not in ("CASH","Venta de otro activo","CASH + venta de activo","Aporte externo"):
+        return {"error":"Origen de fondos inválido."}
+    if operation=="Vender" and funding_mode not in ("CASH","Retiro externo"):
+        return {"error":"Destino de fondos inválido."}
     if amount<=0:
         return {"error":"El monto debe ser positivo."}
     if ticker=="CASH":
