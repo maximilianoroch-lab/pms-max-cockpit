@@ -778,6 +778,12 @@ elif page=="Evolución":
             "Variación_num":st.column_config.NumberColumn("Variación",format="%.1f%%"),
         }
     )
+    if not top.empty:
+        _ev_ticker=st.selectbox("Abrir un activo del Top 15",top["Ticker"].astype(str).tolist(),key="bersoch_evolution_ticker")
+        if st.button("Analizar ticker seleccionado",key="bersoch_evolution_to_ai"):
+            st.session_state["active_ticker"]=_ev_ticker
+            st.session_state["force_page"]="Asesor IA"
+            st.rerun()
 
 elif page=="Riesgo":
     render_global_context_banner()
