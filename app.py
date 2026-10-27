@@ -769,33 +769,39 @@ elif page=="Evolución":
         st.metric("Cambio patrimonial entre extremos observados",fmt_usd(_difference))
         st.caption("Desde "+_first["Fecha orden"].strftime("%d/%m/%Y")+" hasta "+_end["Fecha orden"].strftime("%d/%m/%Y")+" · incluye aportes/retiros no identificados; no es rentabilidad.")
     st.subheader("Evolución mensual del patrimonio")
-    st.caption("Un cierre observado por mes. Sin inventar meses sin datos ni interpretar variaciones patrimoniales como rentabilidad.")
-    _source=hist.copy()
-    _source=_source.dropna(subset=["Fecha orden"]).loc[lambda df:df["Valor total USD_num"].gt(0)].sort_values("Fecha orden")
+    st.caption("Último cierre realmente observado de cada mes · no es rentabilidad.")
+    # La selección del período ya está aplicada a hist.
+    _source=hist.loc[hist["Valor total USD_num"].gt(0)].dropna(subset=["Fecha orden"]).sort_values("Fecha orden").copy()
     _source["Mes"]=_source["Fecha orden"].dt.to_period("M").astype(str)
-    _observed=_source.drop_duplicates("Mes",keep="last").sort_values("Mes")
-    _mode=st.segmented_control("Visualización",["Barras","Curva"],default="Barras",key="bersoch_monthly_chart_mode")
-    if not _observed.empty:
-        # Mes como categoría textual, para evitar ejes de fecha con horas/fracciones y barras gigantes.
+    _observed=_source.drop_duplicates("Mes",keep="last").sort_values("Mes").copy()
+    _months=len(_observed)
+    if _months==0:
+        st.info("No hay cierres mensuales observados en el período seleccionado.")
+    elif _months==1:
+        _only=_observed.iloc[0]
+        st.metric("Único mes observado: "+_only["Mes"],fmt_usd(_only["Valor total USD_num"]))
+        st.info("Hay un solo mes con cierre observado en este período. No corresponde dibujar una curva ni una barra gigante que sugiera una serie histórica.")
+    else:
+        _observed["Mes"]=pd.Categorical(_observed["Mes"],categories=_observed["Mes"].tolist(),ordered=True)
+        _mode=st.segmented_control("Visualización",["Barras","Curva"],default="Barras",key="bersoch_monthly_chart_mode")
         if _mode=="Curva":
             _overall=px.line(_observed,x="Mes",y="Valor total USD_num",markers=True,
                 labels={"Mes":"Mes","Valor total USD_num":"Patrimonio USD"})
-            _overall.update_traces(line=dict(width=3,color="#64b5e4"),marker=dict(size=8))
+            _overall.update_traces(line=dict(width=3,color="#64b5e4"),marker=dict(size=9))
         else:
             _overall=px.bar(_observed,x="Mes",y="Valor total USD_num",
                 labels={"Mes":"Mes","Valor total USD_num":"Patrimonio USD"},
                 color_discrete_sequence=["#5aa6d9"])
-            _overall.update_traces(marker_line_width=0)
-        _overall.update_layout(height=390,margin=dict(l=12,r=18,t=18,b=46),
+            _overall.update_traces(width=0.48,marker_line_width=0)
+        _overall.update_layout(height=380,margin=dict(l=12,r=18,t=18,b=46),
             showlegend=False,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#dce6f2"),hovermode="x unified",bargap=0.4)
+            font=dict(color="#dce6f2"),hovermode="x unified",bargap=0.45)
         _overall.update_yaxes(tickprefix="US$ ",tickformat=",.0f",
             gridcolor="rgba(170,194,215,0.13)",rangemode="tozero")
-        _overall.update_xaxes(type="category",showgrid=False,tickangle=0)
+        _overall.update_xaxes(type="category",categoryorder="array",categoryarray=_observed["Mes"].astype(str).tolist(),
+            showgrid=False,tickangle=0)
         st.plotly_chart(_overall,width="stretch")
-        st.caption(f"{len(_observed)} meses con cierre observado. El histórico mensual desde 2024 sigue pendiente de valuación verificable.")
-    else:
-        st.info("Todavía no hay cierres mensuales observados para graficar.")
+        st.caption(f"{_months} cierres mensuales observados. Faltan precios históricos conciliados para reconstruir 2024–2026.")
     st.subheader("Variación diaria · 15 principales activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
