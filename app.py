@@ -781,7 +781,7 @@ elif page=="Evolución":
         return pd.read_csv(StringIO(response.text))
     try:
         _type_monthly=_load_monthly_type_values(PORTFOLIO["sheet_id"])
-        _type_monthly=_type_monthly.loc[_type_monthly["Mes"].astype(str).str.match(r"^20\\d{2}-\\d{2}$")].copy()
+        _type_monthly=_type_monthly.loc[_type_monthly["Mes"].astype(str).str.match(r"^20[0-9]{2}-[0-9]{2}$")].copy()
         _type_monthly=_type_monthly.sort_values("Mes").drop_duplicates("Mes",keep="last")
         for _name in TYPES:
             _type_monthly[_name]=pd.to_numeric(_type_monthly[_name],errors="coerce")
