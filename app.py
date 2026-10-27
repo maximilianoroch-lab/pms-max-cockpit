@@ -777,6 +777,30 @@ elif page=="Evolución":
         fig.update_yaxes(autorange=True, rangemode="tozero")
         st.plotly_chart(fig,width="stretch")
     st.caption(f'{len(hist)} cierres reales en el período seleccionado · sin interpolar fechas faltantes. La variación patrimonial no equivale a rentabilidad.')
+    st.subheader("Reconstrucción histórica 2024–2026")
+    st.caption("Los movimientos históricos no equivalen a valuaciones mensuales. Para graficar por tipo se requieren cantidades conciliadas y precios verificables de cada cierre.")
+    try:
+        _audit_ops=pd.read_csv(
+            f"https://docs.google.com/spreadsheets/d/{PORTFOLIO['sheet_id']}/gviz/tq?tqx=out:csv&sheet=operaciones_normalizadas"
+        )
+        _audit_prices=pd.read_csv(
+            f"https://docs.google.com/spreadsheets/d/{PORTFOLIO['sheet_id']}/gviz/tq?tqx=out:csv&sheet=historial_precios"
+        )
+        _ops_dates=pd.to_datetime(_audit_ops.get("Fecha",pd.Series(dtype=str)),errors="coerce",dayfirst=True)
+        _price_dates=pd.to_datetime(_audit_prices.get("Fecha",pd.Series(dtype=str)),errors="coerce",dayfirst=True)
+        _ops_months=set(_ops_dates.dropna().dt.to_period("M").astype(str))
+        _priced_months=set(_price_dates.dropna().dt.to_period("M").astype(str))
+        _history_months=sorted(_ops_months)
+        if _history_months:
+            _coverage=pd.DataFrame({
+                "Mes":_history_months,
+                "Operaciones":_audit_ops.assign(_mes=_ops_dates.dt.to_period("M").astype(str)).groupby("_mes").size().reindex(_history_months,fill_value=0).values,
+                "Precios registrados": ["Sí" if m in _priced_months else "No" for m in _history_months],
+            })
+            st.dataframe(_coverage,hide_index=True,width="stretch")
+            st.caption("Presencia de precios no implica cobertura completa de todos los instrumentos. Esta tabla es de auditoría; los meses sin valuación íntegra no se grafican como patrimonio.")
+    except (OSError,ValueError,KeyError,TypeError) as _audit_error:
+        st.info("La auditoría mensual de operaciones y cotizaciones no está disponible en este momento. No se generan estimaciones.")
     st.subheader("Cierre mensual observado")
     st.caption("Última observación disponible de cada mes, no necesariamente del último día hábil. No se reconstruyen meses sin valuación.")
     _monthly_source=snaps[["Fecha orden","Valor total USD_num"]].copy() if not snaps.empty and "Fecha orden" in snaps.columns else hist.copy()
