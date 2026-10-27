@@ -361,11 +361,13 @@ def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker
         return {"error":"Origen de fondos inválido."}
     if operation=="Vender" and funding_mode not in ("CASH","Retiro externo"):
         return {"error":"Destino de fondos inválido."}
+    if total<=0:
+        return {"error":"El patrimonio inicial debe ser positivo."}
     if amount<=0:
         return {"error":"El monto debe ser positivo."}
     if ticker=="CASH":
         return {"error":"CASH es el origen o destino de los fondos; elegí otro activo para operar."}
-    if operation=="Vender" and amount>current+0.005:
+    if operation=="Vender" and amount>current:
         return {"error":f"Venta de {fmt_usd(amount)} supera la posición disponible de {fmt_usd(current)}."}
     before=holdings.copy()
     source_before=holdings.get(str(source_ticker),0.0) if source_ticker else 0.0
@@ -381,12 +383,12 @@ def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker
         else:
             cash_used=0.0
         sale_used=amount-cash_used if funding_mode in ("Venta de otro activo","CASH + venta de activo") else 0.0
-        if cash_used>cash_before+0.005:
+        if cash_used>cash_before:
             return {"error":f"CASH insuficiente: requiere {fmt_usd(cash_used)} y hay {fmt_usd(cash_before)}."}
         if sale_used:
             if not source_ticker or source_ticker in (ticker,"CASH"):
                 return {"error":"Seleccioná otro activo válido para financiar la compra."}
-            if sale_used>source_before+0.005:
+            if sale_used>source_before:
                 return {"error":f"No se pueden vender {fmt_usd(sale_used)} de {source_ticker}: disponible {fmt_usd(source_before)}."}
             holdings[source_ticker]-=sale_used
         holdings["CASH"]=cash_before-cash_used
