@@ -777,76 +777,34 @@ elif page=="Evolución":
         fig.update_yaxes(autorange=True, rangemode="tozero")
         st.plotly_chart(fig,width="stretch")
     st.caption(f'{len(hist)} cierres reales en el período seleccionado · sin interpolar fechas faltantes. La variación patrimonial no equivale a rentabilidad.')
-    st.subheader("Reconstrucción histórica 2024–2026")
-    st.caption("Los movimientos históricos no equivalen a valuaciones mensuales. Para graficar por tipo se requieren cantidades conciliadas y precios verificables de cada cierre.")
-    try:
-        _audit_ops=pd.read_csv(
-            f"https://docs.google.com/spreadsheets/d/{PORTFOLIO['sheet_id']}/gviz/tq?tqx=out:csv&sheet=operaciones_normalizadas"
-        )
-        _audit_prices=pd.read_csv(
-            f"https://docs.google.com/spreadsheets/d/{PORTFOLIO['sheet_id']}/gviz/tq?tqx=out:csv&sheet=historial_precios"
-        )
-        def _parse_audit_date(col):
-            values=pd.to_numeric(col,errors="coerce")
-            serial=pd.to_datetime(values,unit="D",origin="1899-12-30",errors="coerce")
-            textual=pd.to_datetime(col.where(values.isna()),format="%Y-%m-%d",errors="coerce").fillna(pd.to_datetime(col.where(values.isna()),dayfirst=True,format="mixed",errors="coerce"))
-            return serial.fillna(textual)
-        from monthly_reconstruction import monthly_quantities
-        _monthly_positions,_monthly_exceptions=monthly_quantities(_audit_ops)
-        st.caption(f"Reconstrucción preliminar: {len(_monthly_positions)} registros de tenencias por mes y ticker. Sin precios históricos, no equivalen a patrimonio.")
-        if not _monthly_exceptions.empty:
-            with st.expander("Eventos que necesitan conciliación (opciones y amortizaciones)"):
-                st.dataframe(_monthly_exceptions,hide_index=True,width="stretch")
-        _ops_dates=_parse_audit_date(_audit_ops["Fecha"])
-        _price_dates=_parse_audit_date(_audit_prices["Fecha"])
-        _ops_months=set(_ops_dates.dropna().dt.to_period("M").astype(str))
-        _priced_months=set(_price_dates.dropna().dt.to_period("M").astype(str))
-        _history_months=sorted(_ops_months)
-        if _history_months:
-            _coverage=pd.DataFrame({
-                "Mes":_history_months,
-                "Operaciones":_audit_ops.assign(_mes=_ops_dates.dt.to_period("M").astype(str)).groupby("_mes").size().reindex(_history_months,fill_value=0).values,
-                "Precios registrados": ["Sí" if m in _priced_months else "No" for m in _history_months],
-            })
-            st.dataframe(_coverage,hide_index=True,width="stretch")
-            st.caption("Presencia de precios no implica cobertura completa de todos los instrumentos. Esta tabla es de auditoría; los meses sin valuación íntegra no se grafican como patrimonio.")
-    except (OSError,ValueError,KeyError,TypeError) as _audit_error:
-        st.info("La auditoría mensual de operaciones y cotizaciones no está disponible en este momento. No se generan estimaciones.")
-    st.subheader("Cierre mensual observado")
-    st.caption("Última observación disponible de cada mes, no necesariamente del último día hábil. No se reconstruyen meses sin valuación.")
-    _monthly_source=snaps[["Fecha orden","Valor total USD_num"]].copy() if not snaps.empty and "Fecha orden" in snaps.columns else hist.copy()
-    if not _monthly_source.empty:
-        _monthly_source=_monthly_source.dropna(subset=["Fecha orden"]).sort_values("Fecha orden")
-        _monthly_source=_monthly_source.loc[_monthly_source["Valor total USD_num"].gt(0)].copy()
-        _monthly_source["Mes"]=_monthly_source["Fecha orden"].dt.to_period("M").astype(str)
-        _monthly=_monthly_source.groupby("Mes",as_index=False).tail(1).copy()
-        _monthly=_monthly.sort_values("Fecha orden")
-        st.caption(f"{len(_monthly)} meses con valuación observada. La serie desde 2024 requiere cierres históricos conciliados.")
-    else:
-        st.info("Todavía no hay observaciones mensuales verificables.")
-    st.subheader("Evolución acumulada · vista comparativa")
+    st.subheader("Evolución mensual del patrimonio")
+    st.caption("Un cierre observado por mes. Sin inventar meses sin datos ni interpretar variaciones patrimoniales como rentabilidad.")
+    _source=snaps[["Fecha orden","Valor total USD_num"]].copy() if not snaps.empty and "Fecha orden" in snaps.columns else hist.copy()
+    _source=_source.dropna(subset=["Fecha orden"]).loc[lambda df:df["Valor total USD_num"].gt(0)].sort_values("Fecha orden")
+    _source["Mes"]=_source["Fecha orden"].dt.to_period("M").astype(str)
+    _observed=_source.drop_duplicates("Mes",keep="last").sort_values("Mes")
     _mode=st.segmented_control("Visualización",["Barras","Curva"],default="Barras",key="bersoch_monthly_chart_mode")
-    if not _monthly_source.empty:
-        _observed=_monthly_source.sort_values("Fecha orden").copy()
-        _observed["Mes"]=_observed["Fecha orden"].dt.to_period("M").astype(str)
-        _observed=_observed.groupby("Mes",as_index=False).tail(1).sort_values("Fecha orden")
+    if not _observed.empty:
+        # Mes como categoría textual, para evitar ejes de fecha con horas/fracciones y barras gigantes.
         if _mode=="Curva":
-            _overall=px.line(_observed,x="Fecha orden",y="Valor total USD_num",markers=True,
-                 labels={"Fecha orden":"Fecha observada","Valor total USD_num":"Patrimonio USD"})
+            _overall=px.line(_observed,x="Mes",y="Valor total USD_num",markers=True,
+                labels={"Mes":"Mes","Valor total USD_num":"Patrimonio USD"})
+            _overall.update_traces(line=dict(width=3,color="#64b5e4"),marker=dict(size=8))
         else:
             _overall=px.bar(_observed,x="Mes",y="Valor total USD_num",
-                 labels={"Mes":"Mes con cierre observado","Valor total USD_num":"Patrimonio USD"},
-                 color_discrete_sequence=["#5aa6d9"])
-        _overall.update_layout(height=400,margin=dict(l=12,r=18,t=20,b=48),
-             showlegend=False,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
-             font=dict(color="#dce6f2"),hovermode="x unified")
+                labels={"Mes":"Mes","Valor total USD_num":"Patrimonio USD"},
+                color_discrete_sequence=["#5aa6d9"])
+            _overall.update_traces(marker_line_width=0,marker_cornerradius=5)
+        _overall.update_layout(height=390,margin=dict(l=12,r=18,t=18,b=46),
+            showlegend=False,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#dce6f2"),hovermode="x unified",bargap=0.4)
         _overall.update_yaxes(tickprefix="US$ ",tickformat=",.0f",
-             gridcolor="rgba(170,194,215,0.13)",rangemode="tozero")
-        _overall.update_xaxes(showgrid=False)
+            gridcolor="rgba(170,194,215,0.13)",rangemode="tozero")
+        _overall.update_xaxes(type="category",showgrid=False,tickangle=0)
         st.plotly_chart(_overall,width="stretch")
-        st.caption("Suma patrimonial total según snapshots observados. No es rentabilidad; no hay desglose histórico mensual por tipo verificado.")
+        st.caption(f"{len(_observed)} meses con cierre observado. El histórico mensual desde 2024 sigue pendiente de valuación verificable.")
     else:
-        st.info("No hay cierres mensuales observados para graficar.")
+        st.info("Todavía no hay cierres mensuales observados para graficar.")
     st.subheader("Variación diaria · 15 principales activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
