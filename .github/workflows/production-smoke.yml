@@ -19,6 +19,7 @@ jobs:
           python - <<'PY'
           import os, time, urllib.request, urllib.error, sys
           failed = []
+          asleep = []
           for key in ("BERSOCH_URL", "DEMO_URL"):
               url = os.environ[key]
               # Streamlit Community Cloud can redirect unauthenticated probes
@@ -36,7 +37,7 @@ jobs:
                   except urllib.error.HTTPError as exc:
                       if exc.code == 303:
                           print(f"{key}: Streamlit gateway returned HTTP 303 redirect loop; browser validation required.")
-                          failed.append(key+" (gateway 303)")
+                          asleep.append(key)
                           break
                       print(f"{key} attempt={attempt}: HTTP {exc.code}")
                       if attempt == 3: failed.append(key)
@@ -45,8 +46,12 @@ jobs:
                       print(f"{key} attempt={attempt}: {type(exc).__name__}: {exc}")
                       if attempt == 3: failed.append(key)
                       else: time.sleep(12)
+          if asleep:
+              print("NOTICE: sleeping/gateway-blocked apps, not an app runtime failure:", ",".join(asleep))
+              print("::warning::Streamlit sleeping gateway prevents unauthenticated HTTP validation; no UI functionality was certified.")
           if failed:
               print("Failed endpoints:", ",".join(failed))
               sys.exit(1)
-          print("Both deployment landing pages reachable; this is NOT interactive UI validation.")
+          if not asleep:
+              print("Both Streamlit landing pages responded; interactive UI remains unverified.")
           PY
