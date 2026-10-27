@@ -1,16 +1,16 @@
-# PMS Max · Cockpit v0.25
+# PMS Bersoch · Cockpit v0.25
 
-Esta es la instancia privada de **PMS Max**.
+Esta es la instancia privada de **PMS Bersoch**.
 
 ## Arquitectura
 - `app.py`: interfaz Streamlit.
 - `data.py`: lectura y normalización de feeds.
 - `advisor.py`: asesor IA y comparadores.
-- `portfolio_config.py`: identidad, fuente de datos y reglas específicas de PMS Max.
+- `portfolio_config.py`: identidad, fuente de datos y reglas específicas de PMS Bersoch.
 - `.streamlit/`: configuración visual y ejemplo de secrets.
 
 ## Aislamiento
-PMS Max debe desplegarse de forma independiente de cualquier otra cartera.
+PMS Bersoch debe desplegarse de forma independiente de cualquier otra cartera.
 
 No usar:
 - selector multi-cartera,
@@ -45,7 +45,7 @@ Incluye consulta libre y acciones guiadas:
 El dashboard funciona sin API key. El asesor requiere `OPENAI_API_KEY`.
 
 ## v0.25 — Capas explícitas
-PMS Max Cockpit queda dividido conceptualmente en:
+PMS Bersoch Cockpit queda dividido conceptualmente en:
 
 1. Dashboard
    - Resumen
@@ -188,3 +188,9 @@ Fix de arranque en Streamlit: `apply_analysis_context()` ahora se define antes d
 - En Diversificación, el cuadro de ETFs pasa de donut a barras/progreso tipo `ETFs principales`.
 - ETFs ordenados de mayor a menor por valor.
 - GLD se incluye como ETF por vehículo, aunque permanece Oro en la composición principal.
+
+## Alcance de Evolución y exposición indirecta
+- Evolución utiliza únicamente cierres observados; no interpola datos faltantes ni presenta cambios patrimoniales como rentabilidad.
+- El cálculo de solapamiento de ETF requiere un archivo `etf_top_holdings.csv` con columnas `ETF, Constituyente, Peso ETF, Fuente, Fecha`; los pesos se expresan como fracciones de 0 a 1 y la fecha debe ser verificable.
+- Sin composición documentada, el análisis informa que no hay datos suficientes; no supone exposición indirecta nula.
+- El despliegue real y el de demostración conservan fuentes y sesiones independientes.
