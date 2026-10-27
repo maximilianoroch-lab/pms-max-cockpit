@@ -794,7 +794,7 @@ elif page=="Evolución":
         _labels={"Cripto":"Cripto","ETF":"ETF","Cedear":"CEDEAR","Bono AR":"Bonos","Acción AR":"Acciones"}
         _colors={"Cripto":"#d71920","ETF":"#ffc000","Cedear":"#80c342","Bono AR":"#4472c4","Acción AR":"#8c8c8c"}
         if _type_monthly.empty:
-            st.info("Todavía no hay cierres mensuales completos de estas cinco categorías. Se necesitan precios históricos conciliados.")
+            st.info("No hay cierres mensuales completos para las cinco categorías en el período. El histórico desde enero de 2024 requiere cotizaciones y tenencias conciliadas; no se interpolan meses.")
         else:
             _long=_type_monthly.melt(id_vars="Mes",value_vars=list(TYPES),var_name="Tipo",value_name="Miles USD")
             _long["Tipo"]=_long["Tipo"].map(_labels)
@@ -825,7 +825,7 @@ elif page=="Evolución":
             _bars.update_xaxes(type="category",showgrid=False)
             _bars.update_yaxes(ticksuffix=" mil",rangemode="tozero",gridcolor="rgba(170,194,215,0.12)")
             st.plotly_chart(_bars,width="stretch")
-            st.caption("Orden desde la base: Cripto, ETF, CEDEAR, Bonos, Acciones. Otros tipos quedan fuera del gráfico. No es rentabilidad.")
+            st.caption("Cobertura disponible: "+", ".join(_type_monthly["Mes"].astype(str).tolist())+". Faltan cierres mensuales verificables desde enero de 2024; no se interpolan valores. Orden: Cripto, ETF, CEDEAR, Bonos, Acciones. No es rentabilidad.")
     except (ValueError,KeyError,TypeError,ImportError,Exception) as _history_error:
         st.warning("No se pudo verificar la serie mensual por tipo. No se grafican valores estimados.")
     st.subheader("Variación diaria · 15 principales activos")
