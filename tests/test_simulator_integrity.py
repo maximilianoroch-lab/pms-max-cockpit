@@ -1,22 +1,28 @@
-import unittest
 import ast
+import unittest
 from pathlib import Path
+from pms_trade import simulate_portfolio_trade
 
 class BersochSimulatorIntegrity(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.source=(Path(__file__).resolve().parents[1]/"app.py").read_text(encoding="utf-8")
-        cls.block=cls.source.split("def simulate_trade(",1)[1].split("COMPARISON_HELP=",1)[0]
     def test_app_syntax(self):
         ast.parse(self.source)
-    def test_checks_cash_amount_finiteness(self):
-        self.assertIn("not math.isfinite(cash_amount)",self.block)
-        self.assertIn("cash_amount<0",self.block)
-    def test_reconciles_result(self):
-        self.assertIn("abs(sum(holdings.values())-new_total)>0.01",self.block)
-        self.assertIn("not math.isfinite(new_total)",self.block)
-        self.assertIn("any(not math.isfinite(v) for v in holdings.values())",self.block)
-    def test_rejects_unknown_ticker(self):
-        self.assertIn('ticker not in holdings or ticker=="CASH"',self.block)
-
-if __name__=="__main__": unittest.main()
+    def test_shared_engine_is_wired(self):
+        self.assertIn("from pms_trade import simulate_portfolio_trade",self.source)
+    def test_cash_funding_keeps_nav(self):
+        r=simulate_portfolio_trade({"AAPL":1000,"CASH":500},"AAPL","Comprar",200,"CASH")
+        self.assertEqual(r["total_after"],1500)
+        self.assertEqual(r["cash_after"],300)
+        self.assertEqual(r["funding_mode"],"CASH")
+    def test_sale_overdraft_is_rejected(self):
+        r=simulate_portfolio_trade({"AAPL":1000,"CASH":500},"AAPL","Vender",1001,"CASH")
+        self.assertIn("error",r)
+    def test_external_contribution_changes_nav(self):
+        r=simulate_portfolio_trade({"AAPL":1000,"CASH":500},"AAPL","Comprar",200,"Aporte externo")
+        self.assertEqual(r["total_after"],1700)
+    def test_invalid_amount_is_rejected(self):
+        r=simulate_portfolio_trade({"AAPL":1000,"CASH":500},"AAPL","Comprar",float("nan"),"CASH")
+        self.assertIn("error",r)
+if __name__=="__main__":unittest.main()
