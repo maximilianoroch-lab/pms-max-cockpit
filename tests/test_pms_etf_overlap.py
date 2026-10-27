@@ -27,4 +27,12 @@ class PartialLookthrough(unittest.TestCase):
   p=pd.DataFrame({"Ticker":["SPY"],"Valor USD_num":[100]})
   c=pd.DataFrame({"ETF":["SPY"],"Constituyente":["A"],"Peso ETF":[.2],"Fuente":[""],"Fecha":["x"]})
   with self.assertRaises(ValueError):approximate_etf_overlap(p,c)
+ def test_invalid_date_rejected(self):
+  p=pd.DataFrame({"Ticker":["SPY"],"Valor USD_num":[100]})
+  c=pd.DataFrame({"ETF":["SPY"],"Constituyente":["AAPL"],"Peso ETF":[.1],"Fuente":["issuer"],"Fecha":["not-a-date"]})
+  with self.assertRaises(ValueError):approximate_etf_overlap(p,c)
+ def test_missing_underlying_rejected(self):
+  p=pd.DataFrame({"Ticker":["SPY"],"Valor USD_num":[100]})
+  c=pd.DataFrame({"ETF":["SPY"],"Constituyente":[""],"Peso ETF":[.1],"Fuente":["issuer"],"Fecha":["2026-10-01"]})
+  with self.assertRaises(ValueError):approximate_etf_overlap(p,c)
 if __name__=="__main__":unittest.main()
