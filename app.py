@@ -407,6 +407,8 @@ def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker
             new_total=total
     if not math.isfinite(new_total) or new_total<=0 or any(not math.isfinite(v) or v<0 for v in holdings.values()):
         return {"error":"El patrimonio o las posiciones resultantes no son válidos."}
+    if any(not math.isfinite(v) for v in holdings.values()):
+        return {"error":"La operación produjo valores inválidos."}
     if abs(sum(holdings.values())-new_total)>0.01:
         return {"error":"No concilian los fondos simulados."}
     top=lambda dic,den: sum(sorted((max(0,v) for v in dic.values()),reverse=True)[:5])/den
