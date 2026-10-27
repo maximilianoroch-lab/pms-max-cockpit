@@ -1251,7 +1251,7 @@ elif page=="Asesor IA":
             rsi_fig.add_hline(y=70,line_dash="dash",line_color="#df9c5a")
             rsi_fig.add_hline(y=30,line_dash="dash",line_color="#74b7aa")
             rsi_fig.update_yaxes(range=[0,100])
-            rsi_fig.update_layout(height=190,showlegend=False)
+            rsi_fig.update_layout(height=380,showlegend=False)
             st.plotly_chart(rsi_fig,width="stretch")
             last=shown.iloc[-1]
             st.caption(f"Cierre ajustado: {last['Close']:.2f} · Distancia EMA 200: {(last['Close']/last['EMA 200']-1)*100:+.1f}% · RSI 14: {last['RSI 14']:.1f} · {shown.index.max():%d/%m/%Y}")
