@@ -62,3 +62,5 @@ def main():
 
 if __name__=="__main__":
     main()
+    from ops.build_monthly_estimate import main as build_history
+    build_history()
