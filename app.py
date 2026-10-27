@@ -794,7 +794,7 @@ elif page=="Evolución":
             _overall=px.bar(_observed,x="Mes",y="Valor total USD_num",
                 labels={"Mes":"Mes","Valor total USD_num":"Patrimonio USD"},
                 color_discrete_sequence=["#5aa6d9"])
-            _overall.update_traces(marker_line_width=0,marker_cornerradius=5)
+            _overall.update_traces(marker_line_width=0)
         _overall.update_layout(height=390,margin=dict(l=12,r=18,t=18,b=46),
             showlegend=False,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
             font=dict(color="#dce6f2"),hovermode="x unified",bargap=0.4)
