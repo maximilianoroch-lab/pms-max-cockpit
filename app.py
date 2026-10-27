@@ -786,8 +786,13 @@ elif page=="Evolución":
         _audit_prices=pd.read_csv(
             f"https://docs.google.com/spreadsheets/d/{PORTFOLIO['sheet_id']}/gviz/tq?tqx=out:csv&sheet=historial_precios"
         )
-        _ops_dates=pd.to_datetime(_audit_ops.get("Fecha",pd.Series(dtype=str)),errors="coerce",dayfirst=True)
-        _price_dates=pd.to_datetime(_audit_prices.get("Fecha",pd.Series(dtype=str)),errors="coerce",dayfirst=True)
+        def _parse_audit_date(col):
+            values=pd.to_numeric(col,errors="coerce")
+            serial=pd.to_datetime(values,unit="D",origin="1899-12-30",errors="coerce")
+            textual=pd.to_datetime(col.where(values.isna()),dayfirst=True,format="mixed",errors="coerce")
+            return serial.fillna(textual)
+        _ops_dates=_parse_audit_date(_audit_ops["Fecha"])
+        _price_dates=_parse_audit_date(_audit_prices["Fecha"])
         _ops_months=set(_ops_dates.dropna().dt.to_period("M").astype(str))
         _priced_months=set(_price_dates.dropna().dt.to_period("M").astype(str))
         _history_months=sorted(_ops_months)
