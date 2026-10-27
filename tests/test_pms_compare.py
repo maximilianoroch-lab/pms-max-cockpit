@@ -33,6 +33,14 @@ class PortfolioComparisonTests(unittest.TestCase):
         invalid.loc[0,"Valor USD_num"]=float("inf")
         with self.assertRaises(ValueError):
             compare_portfolio_positions(invalid,"AAPL","SPY")
+    def test_bersoch_quantity_num_column(self):
+        x=self.positions.rename(columns={"Cantidad":"Cantidad_num"})
+        got=compare_portfolio_positions(x,"AAPL","SPY")
+        self.assertEqual(got.set_index("Ticker").loc["AAPL","Cantidad"],5)
+    def test_missing_quantity_not_invented(self):
+        x=self.positions.drop(columns=["Cantidad"])
+        got=compare_portfolio_positions(x,"AAPL","SPY")
+        self.assertNotIn("Cantidad",got.columns)
     def test_rejects_total_smaller_than_holdings(self):
         with self.assertRaises(ValueError):
             compare_portfolio_positions(self.positions,"AAPL","SPY",100)
