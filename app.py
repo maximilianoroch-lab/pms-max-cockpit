@@ -769,7 +769,7 @@ elif page=="Evolución":
         st.metric("Cambio patrimonial entre extremos observados",fmt_usd(_difference))
         st.caption("Desde "+_first["Fecha orden"].strftime("%d/%m/%Y")+" hasta "+_end["Fecha orden"].strftime("%d/%m/%Y")+" · incluye aportes/retiros no identificados; no es rentabilidad.")
     st.subheader("Evolución mensual por tipo de activo")
-    st.caption("USD en miles · cinco tipos · cierres mensuales registrados, sin completar meses sin datos.")
+    st.caption("USD en miles · histórico anterior a snapshots: reconstrucción estimada; desde snapshots: cierres observados. Variación patrimonial ≠ rentabilidad.")
     from monthly_type_history import monthly_type_values, TYPES
     @st.cache_data(ttl=3600,show_spinner=False)
     def _load_monthly_type_prices(sid):
