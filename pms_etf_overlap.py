@@ -41,8 +41,11 @@ def approximate_etf_overlap(positions,top_holdings,max_names=10):
         coverage.append({"ETF":etf,"Cobertura":weight,"Sin desagregar":max(0,1-weight),"Valor sin desagregar USD":value*max(0,1-weight)})
         for _,r in part.iterrows():
             rows.append({"Activo":r["Constituyente"],"ETF parcial USD":value*r["Peso ETF"]})
-    direct=exposure.rename_axis("Activo").reset_index(name="Directo USD")
     indirect=pd.DataFrame(rows).groupby("Activo",as_index=False)["ETF parcial USD"].sum() if rows else pd.DataFrame(columns=["Activo","ETF parcial USD"])
-    both=direct.merge(indirect,on="Activo",how="outer").fillna(0)
+    # Only identified underlyings: ETF wrappers, cash and unrelated assets
+    # must not be added as if they were distinct underlying exposure.
+    direct=indirect[["Activo"]].copy()
+    direct["Directo USD"]=direct["Activo"].map(exposure).fillna(0.0)
+    both=direct.merge(indirect,on="Activo",how="left")
     both["Total identificado USD"]=both["Directo USD"]+both["ETF parcial USD"]
     return both.sort_values("Total identificado USD",ascending=False),pd.DataFrame(coverage)
