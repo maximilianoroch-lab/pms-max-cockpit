@@ -1,0 +1,17 @@
+name: Historical quantity reconciliation
+on:
+  push:
+    paths: ['.github/workflows/reconcile-quantities.yml','ops/reconcile_quantities_audit.py']
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q requests
+      - name: Compare historical share balances with current inventory
+        run: python -m ops.reconcile_quantities_audit
