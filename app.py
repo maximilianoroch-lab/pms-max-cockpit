@@ -792,7 +792,7 @@ elif page=="Evolución":
             _cutoff=pd.Period(_type_monthly["Mes"].max(),freq="M")-(_months_back-1)
             _type_monthly=_type_monthly.loc[_type_monthly["Mes"]>=str(_cutoff)]
         _labels={"Cripto":"Cripto","ETF":"ETF","Cedear":"CEDEAR","Bono AR":"Bonos","Acción AR":"Acciones"}
-        _colors={"Cripto":"#4c70ba","ETF":"#6cb5a1","Cedear":"#efbb5b","Bono AR":"#8ca3ba","Acción AR":"#df8c69"}
+        _colors={"Cripto":"#d71920","ETF":"#ffc000","Cedear":"#80c342","Bono AR":"#4472c4","Acción AR":"#8c8c8c"}
         if _type_monthly.empty:
             st.info("Todavía no hay cierres mensuales completos de estas cinco categorías. Se necesitan precios históricos conciliados.")
         else:
