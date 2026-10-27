@@ -777,6 +777,25 @@ elif page=="Evolución":
         fig.update_yaxes(autorange=True, rangemode="tozero")
         st.plotly_chart(fig,width="stretch")
     st.caption(f'{len(hist)} cierres reales en el período seleccionado · sin interpolar fechas faltantes. La variación patrimonial no equivale a rentabilidad.')
+    st.subheader("Cierre mensual observado")
+    st.caption("Última observación disponible de cada mes, no necesariamente del último día hábil. No se reconstruyen meses sin valuación.")
+    _monthly_source=snaps[["Fecha orden","Valor total USD_num"]].copy() if not snaps.empty and "Fecha orden" in snaps.columns else hist.copy()
+    if not _monthly_source.empty:
+        _monthly_source=_monthly_source.dropna(subset=["Fecha orden"]).sort_values("Fecha orden")
+        _monthly_source=_monthly_source.loc[_monthly_source["Valor total USD_num"].gt(0)].copy()
+        _monthly_source["Mes"]=_monthly_source["Fecha orden"].dt.to_period("M").astype(str)
+        _monthly=_monthly_source.groupby("Mes",as_index=False).tail(1).copy()
+        _monthly=_monthly.sort_values("Fecha orden")
+        _monthly["Mes etiqueta"]=_monthly["Fecha orden"].dt.strftime("%m/%Y")
+        _monthly_chart=px.bar(_monthly,x="Mes etiqueta",y="Valor total USD_num",
+                              labels={"Mes etiqueta":"Mes observado","Valor total USD_num":"Patrimonio USD"},
+                              hover_data={"Fecha orden":True})
+        _monthly_chart.update_layout(height=340,margin=dict(l=10,r=10,t=15,b=35),showlegend=False)
+        _monthly_chart.update_yaxes(rangemode="tozero")
+        st.plotly_chart(_monthly_chart,width="stretch")
+        st.caption(f"{len(_monthly)} meses con valuación observada. La serie histórica desde 2024 requiere precios y tenencias conciliados para cada cierre.")
+    else:
+        st.info("Todavía no hay observaciones mensuales verificables.")
     st.subheader("Variación diaria · 15 principales activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
