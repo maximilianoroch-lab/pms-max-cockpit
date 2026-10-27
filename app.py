@@ -835,6 +835,28 @@ elif page=="Riesgo":
     st.subheader("Concentración por posición")
     top_positions_table(15)
 
+    st.subheader("Solapamiento relevante en ETF · principales componentes")
+    st.caption("Estimación parcial solo con participaciones principales fechadas y documentadas; el resto del ETF queda expresamente sin desagregar.")
+    from pathlib import Path as _Path
+    from pms_etf_overlap import approximate_etf_overlap
+    _etf_snapshot=_Path(__file__).with_name("etf_top_holdings.csv")
+    if _etf_snapshot.exists():
+        _etf_weights=pd.read_csv(_etf_snapshot)
+        if not _etf_weights.empty:
+            try:
+                _overlap,_coverage=approximate_etf_overlap(data.get("app_feed_v2",pd.DataFrame()),_etf_weights,max_names=10)
+                if not _overlap.empty:
+                    _overlap_show=_overlap.head(20).copy()
+                    for _column in ("Directo USD","ETF parcial USD","Total identificado USD"):
+                        _overlap_show[_column]=_overlap_show[_column].map(fmt_usd)
+                    st.dataframe(_overlap_show,hide_index=True,width='stretch')
+                if not _coverage.empty:
+                    _remaining=float(_coverage["Valor sin desagregar USD"].sum())
+                    st.caption("ETF no desagregados dentro de la selección: "+fmt_usd(_remaining)+" · no se asignan artificialmente a ningún emisor o sector.")
+            except (ValueError,KeyError,TypeError) as _exc:
+                st.warning("Composición ETF no válida: "+str(_exc))
+    else:
+        st.caption("Se incorporarán las principales participaciones con fuente y fecha al revisar el benchmark; no se estiman pesos sin respaldo.")
 elif page=="Custodia":
     cash_df=data.get("custodia_cash_v2",pd.DataFrame()).copy()  # Sólo conciliación interna, no mostrar efectivo.
     summ=data["app_custodia_resumen_v2"].copy()
