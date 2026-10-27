@@ -789,7 +789,7 @@ elif page=="Evolución":
         def _parse_audit_date(col):
             values=pd.to_numeric(col,errors="coerce")
             serial=pd.to_datetime(values,unit="D",origin="1899-12-30",errors="coerce")
-            textual=pd.to_datetime(col.where(values.isna()),dayfirst=True,format="mixed",errors="coerce")
+            textual=pd.to_datetime(col.where(values.isna()),format="%Y-%m-%d",errors="coerce").fillna(pd.to_datetime(col.where(values.isna()),dayfirst=True,format="mixed",errors="coerce"))
             return serial.fillna(textual)
         from monthly_reconstruction import monthly_quantities
         _monthly_positions,_monthly_exceptions=monthly_quantities(_audit_ops)
