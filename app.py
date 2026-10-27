@@ -828,6 +828,39 @@ elif page=="Evolución":
             st.caption("Cobertura disponible: "+", ".join(_type_monthly["Mes"].astype(str).tolist())+". Faltan cierres mensuales verificables desde enero de 2024; no se interpolan valores. Orden: Cripto, ETF, CEDEAR, Bonos, Acciones. No es rentabilidad.")
     except (ValueError,KeyError,TypeError,ImportError,Exception) as _history_error:
         st.warning("No se pudo verificar la serie mensual por tipo. No se grafican valores estimados.")
+    with st.expander("Valuación histórica provisional · FUT, GALILEO y SCHROD",expanded=False):
+        st.caption("Estimación lineal entre costo USD de compra y última valuación manual registrada. No es una cotización histórica ni un rendimiento calculado.")
+        try:
+            import requests as _requests
+            from io import StringIO as _StringIO
+            from special_manual_history import provisional_monthly
+            @st.cache_data(ttl=3600,show_spinner=False)
+            def _manual_history_sources(sheet_id):
+                base=f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq"
+                tables=[]
+                for name in ("operaciones_normalizadas","app_feed_v2"):
+                    response=_requests.get(base,params={"tqx":"out:csv","sheet":name},timeout=18)
+                    response.raise_for_status()
+                    tables.append(pd.read_csv(_StringIO(response.text)))
+                return tables
+            _operations_history,_manual_positions=_manual_history_sources(PORTFOLIO["sheet_id"])
+            _manual_history=provisional_monthly(_operations_history,_manual_positions)
+            if _manual_history.empty:
+                st.info("No hay dos puntos de valuación válidos para reconstruir estos instrumentos.")
+            else:
+                _manual_history["Miles USD"]=_manual_history["Valor USD"]/1000
+                _manual_fig=px.line(_manual_history,x="Mes",y="Miles USD",color="Ticker",
+                    markers=True,category_orders={"Ticker":["FUT","GALILEO","SCHROD"]},
+                    labels={"Mes":"Mes","Miles USD":"Miles USD"})
+                _manual_fig.update_traces(line=dict(dash="dash",width=2))
+                _manual_fig.update_layout(height=320,margin=dict(l=12,r=12,t=10,b=38),
+                    hovermode="x unified",legend=dict(orientation="h",y=-0.27,x=0),
+                    paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
+                _manual_fig.update_xaxes(type="category",showgrid=False)
+                st.plotly_chart(_manual_fig,width="stretch")
+                st.caption("A partir de ahora, los nuevos cierres mensuales observados deberán reemplazar estas proyecciones. Los otros activos requieren precios históricos independientes.")
+        except Exception:
+            st.info("La estimación manual no está disponible. Se conservan los datos originales sin alteración.")
     st.subheader("Variación diaria · 15 principales activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
