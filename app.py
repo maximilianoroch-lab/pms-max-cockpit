@@ -648,6 +648,15 @@ elif page=="Diversificación":
         )
 
 
+    if not detail.empty and st.session_state.get("analysis_context",{}).get("value"):
+        _context_tickers=sorted(detail["Ticker"].dropna().astype(str).unique().tolist())
+        if _context_tickers:
+            _context_ticker=st.selectbox("Analizar activo de esta exposición",_context_tickers,key="bersoch_exposure_focus")
+            if st.button("Abrir en Asesor IA",key="bersoch_exposure_to_ai"):
+                st.session_state["active_ticker"]=_context_ticker
+                st.session_state["force_page"]="Asesor IA"
+                st.rerun()
+
     total_port = float(summary["total"]) if pd.notna(summary.get("total")) else 0.0
     crypto_port = float(summary["crypto"]) if pd.notna(summary.get("crypto")) else 0.0
     conventional_port = max(total_port - crypto_port, 0.0)
