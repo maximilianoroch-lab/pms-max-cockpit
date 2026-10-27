@@ -751,17 +751,22 @@ elif page=="Evolución":
     hist=hist.drop_duplicates("Fecha orden",keep="last")
     from pms_evolution import observed_window
     _period=st.segmented_control("Período observado",["1M","3M","6M","1A","3A","5A","Todo"],default="Todo",key="bersoch_evolution_period")
+    _all_observations=len(hist)
     hist=observed_window(hist,"Fecha orden",_period or "Todo")
+    st.caption(f"Cobertura: {len(hist)} de {_all_observations} cierres observados. Las fechas sin datos no se completan.")
     if len(hist)>1:
         _first,_end=hist.iloc[0],hist.iloc[-1]
         _difference=float(_end["Valor total USD_num"]-_first["Valor total USD_num"])
         st.metric("Cambio patrimonial entre extremos observados",fmt_usd(_difference))
         st.caption("Desde "+_first["Fecha orden"].strftime("%d/%m/%Y")+" hasta "+_end["Fecha orden"].strftime("%d/%m/%Y")+" · incluye aportes/retiros no identificados; no es rentabilidad.")
-    fig=px.line(hist,x="Fecha orden",y="Valor total USD_num",markers=True,
-                labels={"Fecha orden":"Fecha","Valor total USD_num":"Patrimonio USD"})
-    fig.update_layout(height=420,margin=dict(l=10,r=10,t=15,b=15))
-    fig.update_yaxes(range=[250000,325000],tick0=250000,dtick=25000,autorange=False)
-    st.plotly_chart(fig,width='stretch')
+    if hist.empty:
+        st.info("No hay cierres observados para el período seleccionado.")
+    else:
+        fig=px.line(hist,x="Fecha orden",y="Valor total USD_num",markers=True,
+                    labels={"Fecha orden":"Fecha","Valor total USD_num":"Patrimonio USD"})
+        fig.update_layout(height=420,margin=dict(l=10,r=10,t=15,b=15))
+        fig.update_yaxes(autorange=True, rangemode="tozero")
+        st.plotly_chart(fig,width="stretch")
     st.caption(f'{len(hist)} cierres reales en el período seleccionado · sin interpolar fechas faltantes. La variación patrimonial no equivale a rentabilidad.')
     st.subheader("Variación diaria · 15 principales activos")
     app=data["app_feed_v2"].copy()
