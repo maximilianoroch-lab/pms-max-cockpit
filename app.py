@@ -749,12 +749,15 @@ elif page=="Evolución":
         hist=evo[["Fecha orden","Valor total USD_num"]].dropna(subset=["Fecha orden"])
     hist=hist.loc[hist["Valor total USD_num"].gt(0)].sort_values("Fecha orden")
     hist=hist.drop_duplicates("Fecha orden",keep="last")
+    from pms_evolution import observed_window
+    _period=st.segmented_control("Período observado",["1M","3M","6M","1A","3A","5A","Todo"],default="Todo",key="bersoch_evolution_period")
+    hist=observed_window(hist,"Fecha orden",_period or "Todo")
     fig=px.line(hist,x="Fecha orden",y="Valor total USD_num",markers=True,
                 labels={"Fecha orden":"Fecha","Valor total USD_num":"Patrimonio USD"})
     fig.update_layout(height=420,margin=dict(l=10,r=10,t=15,b=15))
     fig.update_yaxes(range=[250000,325000],tick0=250000,dtick=25000,autorange=False)
     st.plotly_chart(fig,width='stretch')
-    st.caption(f'{len(hist)} cierres reales disponibles · sin interpolar fechas faltantes. La variación patrimonial no equivale a rentabilidad.')
+    st.caption(f'{len(hist)} cierres reales en el período seleccionado · sin interpolar fechas faltantes. La variación patrimonial no equivale a rentabilidad.')
     st.subheader("Variación diaria · 15 principales activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
