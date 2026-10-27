@@ -1,0 +1,40 @@
+name: Historical market source probe
+on:
+  push:
+    paths:
+      - '.github/workflows/historical-market-probe.yml'
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test public endpoints and save result
+        run: |
+          python - <<'PY'
+          import json,urllib.request,urllib.error
+          tests={
+            "Data912_GGAL":"https://data912.com/historical/stocks/GGAL",
+            "Data912_AAPL_CEDEAR":"https://data912.com/historical/cedears/AAPL",
+            "Data912_AL30":"https://data912.com/historical/bonds/AL30",
+            "Binance_BTC":"https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=2",
+            "Sheet_ops":"https://docs.google.com/spreadsheets/d/18qu9LXo55qQZq4oEAq42u_DKaI7e9lZL_PkfUZiu0T0/gviz/tq?tqx=out:csv&sheet=operaciones_normalizadas",
+          }
+          out={}
+          for key,url in tests.items():
+            try:
+              req=urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0"})
+              with urllib.request.urlopen(req,timeout=18) as res:
+                raw=res.read(4000000)
+                out[key]={"status":res.status,"length":len(raw),"example":raw[:110].decode("utf-8","replace")}
+            except Exception as exc:out[key]={"error":str(exc)[:250]}
+          print(json.dumps(out,ensure_ascii=False,indent=2))
+          with open("probe.json","w") as f:json.dump(out,f,indent=2)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: market-source-probe
+          path: probe.json
