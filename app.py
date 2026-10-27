@@ -768,40 +768,66 @@ elif page=="Evolución":
         _difference=float(_end["Valor total USD_num"]-_first["Valor total USD_num"])
         st.metric("Cambio patrimonial entre extremos observados",fmt_usd(_difference))
         st.caption("Desde "+_first["Fecha orden"].strftime("%d/%m/%Y")+" hasta "+_end["Fecha orden"].strftime("%d/%m/%Y")+" · incluye aportes/retiros no identificados; no es rentabilidad.")
-    st.subheader("Evolución mensual del patrimonio")
-    st.caption("Último cierre realmente observado de cada mes · no es rentabilidad.")
-    # La selección del período ya está aplicada a hist.
-    _source=hist.loc[hist["Valor total USD_num"].gt(0)].dropna(subset=["Fecha orden"]).sort_values("Fecha orden").copy()
-    _source["Mes"]=_source["Fecha orden"].dt.to_period("M").astype(str)
-    _observed=_source.drop_duplicates("Mes",keep="last").sort_values("Mes").copy()
-    _months=len(_observed)
-    if _months==0:
-        st.info("No hay cierres mensuales observados en el período seleccionado.")
-    elif _months==1:
-        _only=_observed.iloc[0]
-        st.metric("Único mes observado: "+_only["Mes"],fmt_usd(_only["Valor total USD_num"]))
-        st.info("Hay un solo mes con cierre observado en este período. No corresponde dibujar una curva ni una barra gigante que sugiera una serie histórica.")
-    else:
-        _observed["Mes"]=pd.Categorical(_observed["Mes"],categories=_observed["Mes"].tolist(),ordered=True)
-        _mode=st.segmented_control("Visualización",["Barras","Curva"],default="Barras",key="bersoch_monthly_chart_mode")
-        if _mode=="Curva":
-            _overall=px.line(_observed,x="Mes",y="Valor total USD_num",markers=True,
-                labels={"Mes":"Mes","Valor total USD_num":"Patrimonio USD"})
-            _overall.update_traces(line=dict(width=3,color="#64b5e4"),marker=dict(size=9))
+    st.subheader("Evolución mensual por tipo de activo")
+    st.caption("USD en miles · cinco tipos · cierres mensuales registrados, sin completar meses sin datos.")
+    from monthly_type_history import monthly_type_values, TYPES
+    @st.cache_data(ttl=3600,show_spinner=False)
+    def _load_monthly_type_prices(sid):
+        import requests
+        from io import StringIO
+        url=f"https://docs.google.com/spreadsheets/d/{sid}/gviz/tq"
+        response=requests.get(url,params={"tqx":"out:csv","sheet":"historial_precios"},timeout=18)
+        response.raise_for_status()
+        return pd.read_csv(StringIO(response.text))
+    try:
+        _price_history=_load_monthly_type_prices(PORTFOLIO["sheet_id"])
+        _current=data.get("app_feed_v2",pd.DataFrame())
+        _expected=(_current.loc[_current["Tipo"].isin(TYPES),"Ticker"].dropna().astype(str).unique().tolist()
+            if not _current.empty and {"Tipo","Ticker"}.issubset(_current.columns) else [])
+        _type_monthly=monthly_type_values(_price_history,expected_tickers=_expected)
+        _type_monthly=_type_monthly.loc[_type_monthly["Estado"].eq("OBSERVADO")].copy()
+        _window=st.segmented_control("Período mensual",["Todo","1A","2A","3A"],default="Todo",key="bersoch_type_month_window")
+        if not _type_monthly.empty and _window!="Todo":
+            _months_back={"1A":12,"2A":24,"3A":36}[_window]
+            _cutoff=pd.Period(_type_monthly["Mes"].max(),freq="M")-(_months_back-1)
+            _type_monthly=_type_monthly.loc[_type_monthly["Mes"]>=str(_cutoff)]
+        _labels={"Cripto":"Cripto","ETF":"ETF","Cedear":"CEDEAR","Bono AR":"Bonos","Acción AR":"Acciones"}
+        _colors={"Cripto":"#4c70ba","ETF":"#6cb5a1","Cedear":"#efbb5b","Bono AR":"#8ca3ba","Acción AR":"#df8c69"}
+        if _type_monthly.empty:
+            st.info("Todavía no hay cierres mensuales completos de estas cinco categorías. Se necesitan precios históricos conciliados.")
         else:
-            _overall=px.bar(_observed,x="Mes",y="Valor total USD_num",
-                labels={"Mes":"Mes","Valor total USD_num":"Patrimonio USD"},
-                color_discrete_sequence=["#5aa6d9"])
-            _overall.update_traces(width=0.48,marker_line_width=0)
-        _overall.update_layout(height=380,margin=dict(l=12,r=18,t=18,b=46),
-            showlegend=False,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#dce6f2"),hovermode="x unified",bargap=0.45)
-        _overall.update_yaxes(tickprefix="US$ ",tickformat=",.0f",
-            gridcolor="rgba(170,194,215,0.13)",rangemode="tozero")
-        _overall.update_xaxes(type="category",categoryorder="array",categoryarray=_observed["Mes"].astype(str).tolist(),
-            showgrid=False,tickangle=0)
-        st.plotly_chart(_overall,width="stretch")
-        st.caption(f"{_months} cierres mensuales observados. Faltan precios históricos conciliados para reconstruir 2024–2026.")
+            _long=_type_monthly.melt(id_vars="Mes",value_vars=list(TYPES),var_name="Tipo",value_name="Miles USD")
+            _long["Tipo"]=_long["Tipo"].map(_labels)
+            _long["Mes"]=pd.Categorical(_long["Mes"],categories=_type_monthly["Mes"].tolist(),ordered=True)
+            _palette={_labels[k]:v for k,v in _colors.items()}
+            st.markdown("#### Curvas por tipo")
+            if len(_type_monthly)>=2:
+                _lines=px.line(_long,x="Mes",y="Miles USD",color="Tipo",markers=True,
+                    category_orders={"Tipo":[_labels[t] for t in TYPES]},
+                    color_discrete_map=_palette)
+                _lines.update_traces(line=dict(width=3),marker=dict(size=7))
+                _lines.update_layout(height=410,margin=dict(l=12,r=18,t=14,b=44),
+                    hovermode="x unified",legend=dict(orientation="h",y=-0.23,x=0),
+                    paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
+                _lines.update_xaxes(type="category",showgrid=False)
+                _lines.update_yaxes(ticksuffix=" mil",gridcolor="rgba(170,194,215,0.12)")
+                st.plotly_chart(_lines,width="stretch")
+            else:
+                st.info("Hay un solo mes con valuación registrada: las curvas aparecerán al disponer de un segundo cierre mensual.")
+            st.markdown("#### Barras mensuales apiladas")
+            _bars=px.bar(_long,x="Mes",y="Miles USD",color="Tipo",barmode="stack",
+                category_orders={"Tipo":[_labels[t] for t in TYPES]},
+                color_discrete_map=_palette)
+            _bars.update_layout(height=430,margin=dict(l=12,r=18,t=14,b=48),
+                hovermode="x unified",bargap=0.38,
+                legend=dict(orientation="h",y=-0.23,x=0),
+                paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
+            _bars.update_xaxes(type="category",showgrid=False)
+            _bars.update_yaxes(ticksuffix=" mil",rangemode="tozero",gridcolor="rgba(170,194,215,0.12)")
+            st.plotly_chart(_bars,width="stretch")
+            st.caption("Orden desde la base: Cripto, ETF, CEDEAR, Bonos, Acciones. Otros tipos quedan fuera del gráfico. No es rentabilidad.")
+    except (ValueError,KeyError,TypeError,ImportError,Exception) as _history_error:
+        st.warning("No se pudo verificar la serie mensual por tipo. No se grafican valores estimados.")
     st.subheader("Variación diaria · 15 principales activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
