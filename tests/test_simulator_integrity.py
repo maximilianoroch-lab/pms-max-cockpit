@@ -15,6 +15,7 @@ class BersochSimulatorIntegrity(unittest.TestCase):
     def test_reconciles_result(self):
         self.assertIn("abs(sum(holdings.values())-new_total)>0.01",self.block)
         self.assertIn("not math.isfinite(new_total)",self.block)
+        self.assertIn("any(not math.isfinite(v) for v in holdings.values())",self.block)
     def test_rejects_unknown_ticker(self):
         self.assertIn('ticker not in holdings or ticker=="CASH"',self.block)
 
