@@ -770,31 +770,31 @@ elif page=="Evolución":
         st.caption("Desde "+_first["Fecha orden"].strftime("%d/%m/%Y")+" hasta "+_end["Fecha orden"].strftime("%d/%m/%Y")+" · incluye aportes/retiros no identificados; no es rentabilidad.")
     st.subheader("Evolución mensual por tipo de activo")
     st.caption("USD en miles · histórico anterior a snapshots: reconstrucción estimada; desde snapshots: cierres observados. Variación patrimonial ≠ rentabilidad.")
-    from monthly_type_history import monthly_type_values, TYPES
-    @st.cache_data(ttl=3600,show_spinner=False)
-    def _load_monthly_type_prices(sid):
+    TYPES=("Cripto","ETF","CEDEAR","Bonos","Acciones")
+    @st.cache_data(ttl=900,show_spinner=False)
+    def _load_monthly_type_values(sid):
         import requests
         from io import StringIO
         url=f"https://docs.google.com/spreadsheets/d/{sid}/gviz/tq"
-        response=requests.get(url,params={"tqx":"out:csv","sheet":"historial_precios"},timeout=18)
+        response=requests.get(url,params={"tqx":"out:csv","sheet":"evolucion_tipo_mensual_estimado"},timeout=18)
         response.raise_for_status()
         return pd.read_csv(StringIO(response.text))
     try:
-        _price_history=_load_monthly_type_prices(PORTFOLIO["sheet_id"])
-        _current=data.get("app_feed_v2",pd.DataFrame())
-        _expected=(_current.loc[_current["Tipo"].isin(TYPES),"Ticker"].dropna().astype(str).unique().tolist()
-            if not _current.empty and {"Tipo","Ticker"}.issubset(_current.columns) else [])
-        _type_monthly=monthly_type_values(_price_history,expected_tickers=_expected)
-        _type_monthly=_type_monthly.loc[_type_monthly["Estado"].eq("OBSERVADO")].copy()
+        _type_monthly=_load_monthly_type_values(PORTFOLIO["sheet_id"])
+        _type_monthly=_type_monthly.loc[_type_monthly["Mes"].astype(str).str.match(r"^20\\d{2}-\\d{2}$")].copy()
+        _type_monthly=_type_monthly.sort_values("Mes").drop_duplicates("Mes",keep="last")
+        for _name in TYPES:
+            _type_monthly[_name]=pd.to_numeric(_type_monthly[_name],errors="coerce")
+        _type_monthly=_type_monthly.dropna(subset=list(TYPES))
         _window=st.segmented_control("Período mensual",["Todo","1A","2A","3A"],default="Todo",key="bersoch_type_month_window")
         if not _type_monthly.empty and _window!="Todo":
             _months_back={"1A":12,"2A":24,"3A":36}[_window]
             _cutoff=pd.Period(_type_monthly["Mes"].max(),freq="M")-(_months_back-1)
             _type_monthly=_type_monthly.loc[_type_monthly["Mes"]>=str(_cutoff)]
-        _labels={"Cripto":"Cripto","ETF":"ETF","Cedear":"CEDEAR","Bono AR":"Bonos","Acción AR":"Acciones"}
-        _colors={"Cripto":"#d71920","ETF":"#ffc000","Cedear":"#80c342","Bono AR":"#4472c4","Acción AR":"#8c8c8c"}
+        _labels={t:t for t in TYPES}
+        _colors={"Cripto":"#d71920","ETF":"#ffc000","CEDEAR":"#80c342","Bonos":"#4472c4","Acciones":"#8c8c8c"}
         if len(_type_monthly)<2:
-            st.warning("Evolución 2024–2026 pendiente: todavía no hay dos cierres mensuales completos y comparables por tipo. Una barra aislada de octubre no representa la historia de la cartera.")
+            st.warning("La serie mensual reconstruida todavía no está disponible.")
         else:
             _long=_type_monthly.melt(id_vars="Mes",value_vars=list(TYPES),var_name="Tipo",value_name="Miles USD")
             _long["Tipo"]=_long["Tipo"].map(_labels)
@@ -825,9 +825,9 @@ elif page=="Evolución":
             _bars.update_xaxes(type="category",showgrid=False)
             _bars.update_yaxes(ticksuffix=" mil",rangemode="tozero",gridcolor="rgba(170,194,215,0.12)")
             st.plotly_chart(_bars,width="stretch")
-            st.caption("Cobertura disponible: "+", ".join(_type_monthly["Mes"].astype(str).tolist())+". Faltan cierres mensuales verificables desde enero de 2024; no se interpolan valores. Orden: Cripto, ETF, CEDEAR, Bonos, Acciones. No es rentabilidad.")
+            st.caption(f"{len(_type_monthly)} cierres mensuales · método aproximado hasta septiembre de 2026, snapshots desde octubre de 2026. Orden: Cripto, ETF, CEDEAR, Bonos, Acciones. No representa rentabilidad.")
     except (ValueError,KeyError,TypeError,ImportError,Exception) as _history_error:
-        st.warning("No se pudo verificar la serie mensual por tipo. No se grafican valores estimados.")
+        st.warning("No se pudo cargar la serie mensual reconstruida desde la base.")
     with st.expander("Valuación histórica provisional · FUT, GALILEO y SCHROD",expanded=False):
         st.caption("Estimación lineal entre costo USD de compra y última valuación manual registrada. No es una cotización histórica ni un rendimiento calculado.")
         try:
