@@ -809,9 +809,12 @@ elif page=="Evolución":
                 _lines.update_traces(line=dict(width=3),marker=dict(size=7))
                 _lines.update_layout(height=410,margin=dict(l=12,r=18,t=14,b=44),
                     hovermode="x unified",legend=dict(orientation="h",y=-0.23,x=0),
-                    paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
+                    paper_bgcolor="#000000",plot_bgcolor="#000000",font=dict(color="#ededed"))
                 _lines.update_xaxes(type="category",showgrid=False)
-                _lines.update_yaxes(ticksuffix=" mil",gridcolor="rgba(170,194,215,0.12)")
+                _lines.update_yaxes(ticksuffix=" mil",gridcolor="rgba(220,220,220,0.18)")
+                for _m in _type_monthly["Mes"].astype(str):
+                    if _m.endswith("-12"):
+                        _lines.add_vline(x=_m,line_dash="dot",line_color="#dddddd",line_width=1.5)
                 st.plotly_chart(_lines,width="stretch")
             else:
                 st.info("Hay un solo mes con valuación registrada: las curvas aparecerán al disponer de un segundo cierre mensual.")
@@ -822,9 +825,12 @@ elif page=="Evolución":
             _bars.update_layout(height=430,margin=dict(l=12,r=18,t=14,b=48),
                 hovermode="x unified",bargap=0.38,
                 legend=dict(orientation="h",y=-0.23,x=0),
-                paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)")
+                paper_bgcolor="#000000",plot_bgcolor="#000000",font=dict(color="#ededed"))
             _bars.update_xaxes(type="category",showgrid=False)
             _bars.update_yaxes(ticksuffix=" mil",rangemode="tozero",gridcolor="rgba(170,194,215,0.12)")
+            for _m in _type_monthly["Mes"].astype(str):
+                if _m.endswith("-12"):
+                    _bars.add_vline(x=_m,line_dash="dot",line_color="#dddddd",line_width=1.5)
             st.plotly_chart(_bars,width="stretch")
             st.caption(f"{len(_type_monthly)} cierres mensuales · método aproximado hasta septiembre de 2026, snapshots desde octubre de 2026. Orden: Cripto, Bonos, Acciones, ETF, CEDEAR. No representa rentabilidad.")
     except (ValueError,KeyError,TypeError,ImportError,Exception) as _history_error:
