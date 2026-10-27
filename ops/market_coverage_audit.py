@@ -58,7 +58,7 @@ def main():
         failing=[x for x in coverage if x["estado"]!="OK"]
         print("Sin serie reconocida:",", ".join(x["ticker"]+" ("+x["tipo"]+")" for x in failing))
         print("Series cortas:",", ".join(x["ticker"]+":"+str(x["meses_2024_2026"]) for x in coverage if x["estado"]=="OK" and x["meses_2024_2026"]<20))
-        print("Resumen sin cifras de patrimonio, para auditar cobertura antes de valuar.")
+        print("Resumen de cobertura y calculo historico en ejecución.")
 
 if __name__=="__main__":
     main()
