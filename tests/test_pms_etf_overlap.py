@@ -8,6 +8,13 @@ class PartialLookthrough(unittest.TestCase):
   combined,cover=approximate_etf_overlap(p,c)
   self.assertAlmostEqual(combined.set_index("Activo").loc["AAPL","Total identificado USD"],160)
   self.assertAlmostEqual(cover.iloc[0]["Sin desagregar"],.89)
+ def test_etf_wrapper_not_double_counted_as_underlying(self):
+  p=pd.DataFrame({"Ticker":["SPY","AAPL","CASH"],"Valor USD_num":[1000,100,50]})
+  c=pd.DataFrame({"ETF":["SPY"],"Constituyente":["AAPL"],"Peso ETF":[.06],"Fuente":["issuer"],"Fecha":["2026-10-01"]})
+  combined,coverage=approximate_etf_overlap(p,c)
+  self.assertEqual(combined["Activo"].tolist(),["AAPL"])
+  self.assertAlmostEqual(combined.iloc[0]["Directo USD"],100)
+  self.assertAlmostEqual(combined.iloc[0]["ETF parcial USD"],60)
  def test_missing_composition_does_not_invent_exposure(self):
   p=pd.DataFrame({"Ticker":["AAPL"],"Valor USD_num":[100]})
   out,cov=approximate_etf_overlap(p,pd.DataFrame())
