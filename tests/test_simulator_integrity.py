@@ -22,6 +22,27 @@ class BersochSimulatorIntegrity(unittest.TestCase):
     def test_external_contribution_changes_nav(self):
         r=simulate_portfolio_trade({"AAPL":1000,"CASH":500},"AAPL","Comprar",200,"Aporte externo")
         self.assertEqual(r["total_after"],1700)
+    def test_sell_to_cash_preserves_nav(self):
+        r=simulate_portfolio_trade({"AAPL":1000,"CASH":500},"AAPL","Vender",200,"CASH")
+        self.assertEqual(r["total_after"],1500)
+        self.assertEqual(r["cash_after"],700)
+    def test_external_withdrawal_reduces_nav(self):
+        r=simulate_portfolio_trade({"AAPL":1000,"CASH":500},"AAPL","Vender",200,"Retiro externo")
+        self.assertEqual(r["total_after"],1300)
+        self.assertEqual(r["cash_after"],500)
+    def test_sale_funded_purchase_preserves_nav(self):
+        r=simulate_portfolio_trade({"AAPL":1000,"SPY":2000,"CASH":500},"AAPL","Comprar",300,"Venta de otro activo","SPY")
+        self.assertEqual(r["total_after"],3500)
+        self.assertEqual(r["source_after"],1700)
+    def test_combined_funding_preserves_nav(self):
+        r=simulate_portfolio_trade({"AAPL":1000,"SPY":2000,"CASH":500},"AAPL","Comprar",300,"CASH + venta de activo","SPY",100)
+        self.assertEqual(r["total_after"],3500)
+        self.assertEqual(r["cash_after"],400)
+        self.assertEqual(r["source_after"],1800)
+    def test_input_positions_not_modified(self):
+        holdings={"AAPL":1000,"SPY":2000,"CASH":500}
+        simulate_portfolio_trade(holdings,"AAPL","Comprar",250,"CASH")
+        self.assertEqual(holdings,{"AAPL":1000,"SPY":2000,"CASH":500})
     def test_invalid_amount_is_rejected(self):
         r=simulate_portfolio_trade({"AAPL":1000,"CASH":500},"AAPL","Comprar",float("nan"),"CASH")
         self.assertIn("error",r)
