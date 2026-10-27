@@ -1,5 +1,8 @@
 name: Production reachability smoke
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/production-smoke.yml']
   workflow_dispatch:
   schedule:
     - cron: '15 12 * * *'
