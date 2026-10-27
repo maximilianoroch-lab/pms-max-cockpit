@@ -30,6 +30,12 @@ def approximate_etf_overlap(positions,top_holdings,max_names=10):
         raise ValueError("Pesos ETF inválidos")
     if holdings[["ETF","Constituyente"]].duplicated().any() or holdings["Fuente"].isna().any() or holdings["Fecha"].isna().any() or (holdings["Fuente"].astype(str).str.strip()=="").any():
         raise ValueError("Composición sin fuente, fecha o con ticker duplicado")
+    # Rechazar metadatos meramente presentes pero no verificables.
+    dates=pd.to_datetime(holdings["Fecha"],errors="coerce",utc=True)
+    if dates.isna().any() or (dates > pd.Timestamp.now(tz="UTC")).any():
+        raise ValueError("Fecha ETF inválida o futura")
+    if (holdings["Constituyente"].isin(["","NAN","NONE"])).any() or (holdings["ETF"].isin(["","NAN","NONE"])).any():
+        raise ValueError("Ticker ETF o constituyente vacío")
     holdings=holdings.sort_values(["ETF","Peso ETF"],ascending=[True,False]).groupby("ETF",group_keys=False).head(max_names)
     exposure=pos.groupby("Ticker")["Valor USD_num"].sum()
     rows=[];coverage=[]
