@@ -821,14 +821,7 @@ elif page=="Evolución":
         _monthly_source["Mes"]=_monthly_source["Fecha orden"].dt.to_period("M").astype(str)
         _monthly=_monthly_source.groupby("Mes",as_index=False).tail(1).copy()
         _monthly=_monthly.sort_values("Fecha orden")
-        _monthly["Mes etiqueta"]=_monthly["Fecha orden"].dt.strftime("%m/%Y")
-        _monthly_chart=px.bar(_monthly,x="Mes etiqueta",y="Valor total USD_num",
-                              labels={"Mes etiqueta":"Mes observado","Valor total USD_num":"Patrimonio USD"},
-                              hover_data={"Fecha orden":True})
-        _monthly_chart.update_layout(height=340,margin=dict(l=10,r=10,t=15,b=35),showlegend=False)
-        _monthly_chart.update_yaxes(rangemode="tozero")
-        st.plotly_chart(_monthly_chart,width="stretch")
-        st.caption(f"{len(_monthly)} meses con valuación observada. La serie histórica desde 2024 requiere precios y tenencias conciliados para cada cierre.")
+        st.caption(f"{len(_monthly)} meses con valuación observada. La serie desde 2024 requiere cierres históricos conciliados.")
     else:
         st.info("Todavía no hay observaciones mensuales verificables.")
     st.subheader("Evolución acumulada · vista comparativa")
