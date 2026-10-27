@@ -1079,6 +1079,9 @@ elif page=="Simulador":
         st.info("No se dispone de la cartera para simular.")
     else:
         tickers=sorted(t for t in holdings["Ticker"].dropna().astype(str).unique() if t!="CASH")
+        if not tickers:
+            st.info("No hay posiciones distintas de CASH para simular.")
+            st.stop()
         active=st.session_state.get("active_ticker","")
         idx=tickers.index(active) if active in tickers else 0
         a,b,c=st.columns([1,1,1.1])
