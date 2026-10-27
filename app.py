@@ -817,7 +817,7 @@ elif page=="Evolución":
                 st.info("Hay un solo mes con valuación registrada: las curvas aparecerán al disponer de un segundo cierre mensual.")
             st.markdown("#### Barras mensuales apiladas")
             _bars=px.bar(_long,x="Mes",y="Miles USD",color="Tipo",barmode="stack",
-                category_orders={"Tipo":[_labels[t] for t in TYPES]},
+                category_orders={"Tipo":["Cripto","Bonos","Acciones","ETF","CEDEAR"]},
                 color_discrete_map=_palette)
             _bars.update_layout(height=430,margin=dict(l=12,r=18,t=14,b=48),
                 hovermode="x unified",bargap=0.38,
@@ -826,7 +826,7 @@ elif page=="Evolución":
             _bars.update_xaxes(type="category",showgrid=False)
             _bars.update_yaxes(ticksuffix=" mil",rangemode="tozero",gridcolor="rgba(170,194,215,0.12)")
             st.plotly_chart(_bars,width="stretch")
-            st.caption(f"{len(_type_monthly)} cierres mensuales · método aproximado hasta septiembre de 2026, snapshots desde octubre de 2026. Orden: Cripto, ETF, CEDEAR, Bonos, Acciones. No representa rentabilidad.")
+            st.caption(f"{len(_type_monthly)} cierres mensuales · método aproximado hasta septiembre de 2026, snapshots desde octubre de 2026. Orden: Cripto, Bonos, Acciones, ETF, CEDEAR. No representa rentabilidad.")
     except (ValueError,KeyError,TypeError,ImportError,Exception) as _history_error:
         st.warning("No se pudo cargar la serie mensual reconstruida desde la base.")
     with st.expander("Valuación histórica provisional · FUT, GALILEO y SCHROD",expanded=False):
