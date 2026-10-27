@@ -768,18 +768,9 @@ elif page=="Evolución":
         _difference=float(_end["Valor total USD_num"]-_first["Valor total USD_num"])
         st.metric("Cambio patrimonial entre extremos observados",fmt_usd(_difference))
         st.caption("Desde "+_first["Fecha orden"].strftime("%d/%m/%Y")+" hasta "+_end["Fecha orden"].strftime("%d/%m/%Y")+" · incluye aportes/retiros no identificados; no es rentabilidad.")
-    if hist.empty:
-        st.info("No hay cierres observados para el período seleccionado.")
-    else:
-        fig=px.line(hist,x="Fecha orden",y="Valor total USD_num",markers=True,
-                    labels={"Fecha orden":"Fecha","Valor total USD_num":"Patrimonio USD"})
-        fig.update_layout(height=420,margin=dict(l=10,r=10,t=15,b=15))
-        fig.update_yaxes(autorange=True, rangemode="tozero")
-        st.plotly_chart(fig,width="stretch")
-    st.caption(f'{len(hist)} cierres reales en el período seleccionado · sin interpolar fechas faltantes. La variación patrimonial no equivale a rentabilidad.')
     st.subheader("Evolución mensual del patrimonio")
     st.caption("Un cierre observado por mes. Sin inventar meses sin datos ni interpretar variaciones patrimoniales como rentabilidad.")
-    _source=snaps[["Fecha orden","Valor total USD_num"]].copy() if not snaps.empty and "Fecha orden" in snaps.columns else hist.copy()
+    _source=hist.copy()
     _source=_source.dropna(subset=["Fecha orden"]).loc[lambda df:df["Valor total USD_num"].gt(0)].sort_values("Fecha orden")
     _source["Mes"]=_source["Fecha orden"].dt.to_period("M").astype(str)
     _observed=_source.drop_duplicates("Mes",keep="last").sort_values("Mes")
