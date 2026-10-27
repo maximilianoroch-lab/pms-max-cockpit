@@ -831,6 +831,29 @@ elif page=="Evolución":
         st.caption(f"{len(_monthly)} meses con valuación observada. La serie histórica desde 2024 requiere precios y tenencias conciliados para cada cierre.")
     else:
         st.info("Todavía no hay observaciones mensuales verificables.")
+    st.subheader("Evolución acumulada · vista comparativa")
+    _mode=st.segmented_control("Visualización",["Barras","Curva"],default="Barras",key="bersoch_monthly_chart_mode")
+    if not _monthly_source.empty:
+        _observed=_monthly_source.sort_values("Fecha orden").copy()
+        _observed["Mes"]=_observed["Fecha orden"].dt.to_period("M").astype(str)
+        _observed=_observed.groupby("Mes",as_index=False).tail(1).sort_values("Fecha orden")
+        if _mode=="Curva":
+            _overall=px.line(_observed,x="Fecha orden",y="Valor total USD_num",markers=True,
+                 labels={"Fecha orden":"Fecha observada","Valor total USD_num":"Patrimonio USD"})
+        else:
+            _overall=px.bar(_observed,x="Mes",y="Valor total USD_num",
+                 labels={"Mes":"Mes con cierre observado","Valor total USD_num":"Patrimonio USD"},
+                 color_discrete_sequence=["#5aa6d9"])
+        _overall.update_layout(height=400,margin=dict(l=12,r=18,t=20,b=48),
+             showlegend=False,paper_bgcolor="rgba(0,0,0,0)",plot_bgcolor="rgba(0,0,0,0)",
+             font=dict(color="#dce6f2"),hovermode="x unified")
+        _overall.update_yaxes(tickprefix="US$ ",tickformat=",.0f",
+             gridcolor="rgba(170,194,215,0.13)",rangemode="tozero")
+        _overall.update_xaxes(showgrid=False)
+        st.plotly_chart(_overall,width="stretch")
+        st.caption("Suma patrimonial total según snapshots observados. No es rentabilidad; no hay desglose histórico mensual por tipo verificado.")
+    else:
+        st.info("No hay cierres mensuales observados para graficar.")
     st.subheader("Variación diaria · 15 principales activos")
     app=data["app_feed_v2"].copy()
     top=app[app["Ticker"].notna()].sort_values("Valor USD_num",ascending=False).head(15).copy()
