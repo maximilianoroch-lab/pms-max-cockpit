@@ -11,7 +11,7 @@ def monthly_quantities(operations):
     frame=operations.copy()
     number=pd.to_numeric(frame["Fecha"],errors="coerce")
     frame["Fecha"]=pd.to_datetime(number,unit="D",origin="1899-12-30",errors="coerce").fillna(
-        pd.to_datetime(frame["Fecha"].where(number.isna()),dayfirst=True,format="mixed",errors="coerce")
+        pd.to_datetime(frame["Fecha"].where(number.isna()),format="%Y-%m-%d",errors="coerce").fillna(pd.to_datetime(frame["Fecha"].where(number.isna()),dayfirst=True,format="mixed",errors="coerce"))
     )
     frame["Cantidad"]=pd.to_numeric(frame["Cantidad"],errors="coerce")
     frame=frame.dropna(subset=["Fecha"])
