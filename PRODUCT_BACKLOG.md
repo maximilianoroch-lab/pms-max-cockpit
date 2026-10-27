@@ -12,14 +12,16 @@
 ### 2. Navegación / drill-down — EN CURSO
 - [x] DEMO escritorio: filtrar exposición por región y sector y navegar a IA, Comparar y Simulador.
 - [x] Bersoch: desde distribución geográfica/sectorial se puede aplicar contexto global.
-- [ ] Homologar los recorridos completos, incluidos accesos desde Evolución y Custodia.
+- [x] Acceso desde Top 15 de Evolución al Asesor IA con ticker activo.
+- [ ] Homologar los recorridos completos, incluidos accesos desde Custodia.
 - [ ] Evaluar retiro del selector visual “—” preservando los controles de estado de Streamlit.
 
 ### 3. Riesgo y ETF top holdings — MOTOR LISTO / DATOS PENDIENTES
 - [x] Motor compartido `pms_etf_overlap.py`: cálculo limitado a holdings principales por ETF.
 - [x] Tope configurable de constituyentes, validación de pesos, fuente y fecha.
 - [x] Presentar por separado la fracción **sin desagregar**; no inferir exposición exacta de ETF.
-- [ ] Conectar un conjunto pequeño y fechado de posiciones principales por ETF a la UI de riesgos.
+- [x] Preparar lectura optativa de composiciones principales fechadas en la vista Riesgo, sin generar estimaciones si el archivo fuente falta.
+- [ ] Incorporar el conjunto real y fechado de principales componentes por ETF tras revisar el benchmark.
 - [ ] Mostrar solapamiento significativo por emisor/sector/región sin fingir cobertura del 100 %.
 - [ ] Acordar umbral de materialidad y política de refresco en la etapa de automatización.
 
@@ -29,6 +31,7 @@
 - [x] DEMO mobile: pruebas de aislamiento, navegador, lectura y sintaxis.
 - [x] Bersoch mobile: título de la aplicación corregido.
 - [ ] Certificar visualmente mobile real y DEMO en dispositivos, incluida carga de inventario y estado offline.
+- [x] DEMO mobile: exposición, custodia, evolución desde snapshots independientes, comparación patrimonial, simulación ficticia y resumen hablado.
 - [ ] Alinear funcionalidades móviles avanzadas (el DEMO mobile dirige IA/Comparar/Simulador al escritorio independiente).
 
 ## Regla de precisión
