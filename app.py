@@ -342,87 +342,14 @@ def render_active_context():
 
 
 def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker=None, cash_amount=0.0):
+    """Side-effect-free simulation using the same validated engine as DEMO."""
     app_df=data.get("app_feed_v2",pd.DataFrame()).copy()
     if app_df.empty:
         return None
     vals=app_df.groupby("Ticker",as_index=False)["Valor USD_num"].sum()
     holdings=dict(zip(vals["Ticker"].astype(str), vals["Valor USD_num"].astype(float)))
-    total=sum(holdings.values())
-    ticker=str(ticker)
-    current=holdings.get(ticker,0.0)
-    cash_before=holdings.get("CASH",0.0)
-    import math
-    try:
-        amount=float(amount)
-        cash_amount=float(cash_amount)
-    except (ValueError,TypeError,OverflowError):
-        return {"error":"Los importes deben ser numéricos."}
-    if not math.isfinite(amount) or not math.isfinite(cash_amount) or cash_amount<0 or any(not math.isfinite(v) or v<0 for v in holdings.values()):
-        return {"error":"Importes no finitos o posiciones inválidas; no es seguro simular."}
-    if operation not in ("Comprar","Vender"):
-        return {"error":"Operación no válida."}
-    if operation=="Comprar" and funding_mode not in ("CASH","Venta de otro activo","CASH + venta de activo","Aporte externo"):
-        return {"error":"Origen de fondos inválido."}
-    if operation=="Vender" and funding_mode not in ("CASH","Retiro externo"):
-        return {"error":"Destino de fondos inválido."}
-    if not math.isfinite(total) or total<=0:
-        return {"error":"El patrimonio inicial debe ser positivo."}
-    if amount<=0:
-        return {"error":"El monto debe ser positivo."}
-    if ticker not in holdings or ticker=="CASH":
-        return {"error":"CASH es el origen o destino de los fondos; elegí otro activo para operar."}
-    if operation=="Vender" and amount>current:
-        return {"error":f"Venta de {fmt_usd(amount)} supera la posición disponible de {fmt_usd(current)}."}
-    before=holdings.copy()
-    source_before=holdings.get(str(source_ticker),0.0) if source_ticker else 0.0
-    if operation=="Comprar":
-        if funding_mode=="CASH":
-            cash_used=amount
-        elif funding_mode=="Venta de otro activo":
-            cash_used=0.0
-        elif funding_mode=="CASH + venta de activo":
-            cash_used=float(cash_amount)
-            if cash_used < 0 or cash_used > amount:
-                return {"error":"El importe financiado con CASH debe estar entre cero y el monto total."}
-        else:
-            cash_used=0.0
-        sale_used=amount-cash_used if funding_mode in ("Venta de otro activo","CASH + venta de activo") else 0.0
-        if cash_used>cash_before:
-            return {"error":f"CASH insuficiente: requiere {fmt_usd(cash_used)} y hay {fmt_usd(cash_before)}."}
-        if sale_used:
-            if not source_ticker or source_ticker in (ticker,"CASH"):
-                return {"error":"Seleccioná otro activo válido para financiar la compra."}
-            if sale_used>source_before:
-                return {"error":f"No se pueden vender {fmt_usd(sale_used)} de {source_ticker}: disponible {fmt_usd(source_before)}."}
-            holdings[source_ticker]-=sale_used
-        holdings["CASH"]=cash_before-cash_used
-        holdings[ticker]=current+amount
-        new_total=total+(amount if funding_mode=="Aporte externo" else 0.0)
-    else:
-        holdings[ticker]=current-amount
-        if funding_mode=="Retiro externo":
-            new_total=total-amount
-        else:
-            holdings["CASH"]=cash_before+amount
-            new_total=total
-    if not math.isfinite(new_total) or new_total<=0 or any(not math.isfinite(v) or v<0 for v in holdings.values()):
-        return {"error":"El patrimonio o las posiciones resultantes no son válidos."}
-    if any(not math.isfinite(v) for v in holdings.values()):
-        return {"error":"La operación produjo valores inválidos."}
-    if abs(sum(holdings.values())-new_total)>0.01:
-        return {"error":"No concilian los fondos simulados."}
-    top=lambda dic,den: sum(sorted((max(0,v) for v in dic.values()),reverse=True)[:5])/den
-    cash_after=holdings.get("CASH",0.0)
-    return {
-        "ticker":ticker,"operation":operation,"amount":amount,"funding_mode":funding_mode,
-        "source_ticker":source_ticker if operation=="Comprar" and sale_used else None,
-        "source_before":source_before,"source_after":holdings.get(str(source_ticker),0.0) if source_ticker else 0.0,
-        "total_before":total,"total_after":new_total,
-        "value_before":current,"value_after":holdings[ticker],
-        "cash_before":cash_before,"cash_after":cash_after,
-        "weight_before":current/total if total else 0,"weight_after":holdings[ticker]/new_total,
-        "top5_before":top(before,total),"top5_after":top(holdings,new_total)
-    }
+    from pms_trade import simulate_portfolio_trade
+    return simulate_portfolio_trade(holdings,ticker,operation,amount,funding_mode,source_ticker,cash_amount)
 
 COMPARISON_HELP={
     "P/E":"Precio respecto de ganancias actuales",
