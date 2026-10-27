@@ -30,6 +30,7 @@ class PortfolioComparisonTests(unittest.TestCase):
             compare_portfolio_positions(bad,"AAPL","SPY")
     def test_rejects_infinite_valuation(self):
         invalid=self.positions.copy()
+        invalid["Valor USD_num"]=invalid["Valor USD_num"].astype(float)
         invalid.loc[0,"Valor USD_num"]=float("inf")
         with self.assertRaises(ValueError):
             compare_portfolio_positions(invalid,"AAPL","SPY")
