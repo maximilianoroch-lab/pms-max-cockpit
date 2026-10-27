@@ -770,6 +770,7 @@ elif page=="Evolución":
         st.caption("Desde "+_first["Fecha orden"].strftime("%d/%m/%Y")+" hasta "+_end["Fecha orden"].strftime("%d/%m/%Y")+" · incluye aportes/retiros no identificados; no es rentabilidad.")
     st.subheader("Evolución mensual por tipo de activo")
     st.caption("USD en miles · histórico anterior a snapshots: reconstrucción estimada; desde snapshots: cierres observados. Variación patrimonial ≠ rentabilidad.")
+    st.warning("Serie reconstruida **preliminar**: falta conciliar cierres anuales 2024–2025. Los importes históricos son aproximaciones y no deben utilizarse como patrimonio auditado ni rentabilidad.")
     TYPES=("Cripto","ETF","CEDEAR","Bonos","Acciones")
     @st.cache_data(ttl=900,show_spinner=False)
     def _load_monthly_type_values(sid):
