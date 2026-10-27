@@ -78,6 +78,7 @@ with st.sidebar:
         on_change=lambda: (st.session_state.pop("force_page",None),st.session_state.update(tools_nav="—"))
     )
     st.markdown("### Herramientas")
+    st.markdown("""<style>[data-testid="stSidebar"] [data-testid="stRadio"] label p {white-space:nowrap; font-size:0.91rem}</style>""",unsafe_allow_html=True)
     tool_page=st.radio(
         "Herramientas",
         ["—","Comparar Activos","Simular Compra/Venta"],
