@@ -159,6 +159,8 @@ def main():
         out=path/"bersoch_2024_2026_monthly_estimate.csv"
         with out.open("w",newline="",encoding="utf-8") as f:
             w=csv.DictWriter(f,fieldnames=list(results[0]));w.writeheader();w.writerows(results)
+        import json
+        print("MONTHLY_SERIES_JSON="+json.dumps(results,ensure_ascii=False,allow_nan=False))
         print("MESES_GENERADOS",len(results))
         print("PRIMER_MES",results[0])
         print("ULTIMO_MES",results[-1])
