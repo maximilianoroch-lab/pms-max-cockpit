@@ -793,8 +793,8 @@ elif page=="Evolución":
             _type_monthly=_type_monthly.loc[_type_monthly["Mes"]>=str(_cutoff)]
         _labels={"Cripto":"Cripto","ETF":"ETF","Cedear":"CEDEAR","Bono AR":"Bonos","Acción AR":"Acciones"}
         _colors={"Cripto":"#d71920","ETF":"#ffc000","Cedear":"#80c342","Bono AR":"#4472c4","Acción AR":"#8c8c8c"}
-        if _type_monthly.empty:
-            st.info("No hay cierres mensuales completos para las cinco categorías en el período. El histórico desde enero de 2024 requiere cotizaciones y tenencias conciliadas; no se interpolan meses.")
+        if len(_type_monthly)<2:
+            st.warning("Evolución 2024–2026 pendiente: todavía no hay dos cierres mensuales completos y comparables por tipo. Una barra aislada de octubre no representa la historia de la cartera.")
         else:
             _long=_type_monthly.melt(id_vars="Mes",value_vars=list(TYPES),var_name="Tipo",value_name="Miles USD")
             _long["Tipo"]=_long["Tipo"].map(_labels)
