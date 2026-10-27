@@ -1,0 +1,39 @@
+name: Production reachability smoke
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 12 * * *'
+jobs:
+  deployed-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check deployed Streamlit HTTP endpoints
+        env:
+          BERSOCH_URL: https://pms-max.streamlit.app/
+          DEMO_URL: https://demo-pms-max-mxqteogjttzuufoah5nwnj.streamlit.app/
+        run: |
+          python - <<'PY'
+          import os, time, urllib.request, urllib.error, sys
+          failed = []
+          for key in ("BERSOCH_URL", "DEMO_URL"):
+              url = os.environ[key]
+              for attempt in range(1, 4):
+                  try:
+                      req = urllib.request.Request(url, headers={"User-Agent": "PMS-production-smoke/1.0"})
+                      with urllib.request.urlopen(req, timeout=25) as res:
+                          code, body = res.status, res.read(1024*1024)
+                          final = res.url
+                      print(f"{key} attempt={attempt} http={code} bytes={len(body)} final={final}")
+                      if code == 200 and body and "streamlit" in body.decode("utf-8","ignore").lower():
+                          break
+                      raise ValueError("Unexpected HTTP or HTML content")
+                  except Exception as exc:
+                      print(f"{key} attempt={attempt} failed: {type(exc).__name__}: {exc}")
+                      if attempt == 3: failed.append(key)
+                      else: time.sleep(12)
+          if failed:
+              print("Failed endpoints:", ",".join(failed))
+              sys.exit(1)
+          print("Both deployment landing pages reachable; this is NOT interactive UI validation.")
+          PY
