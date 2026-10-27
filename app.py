@@ -351,9 +351,13 @@ def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker
     ticker=str(ticker)
     current=holdings.get(ticker,0.0)
     cash_before=holdings.get("CASH",0.0)
-    amount=float(amount)
     import math
-    if not math.isfinite(amount) or any(not math.isfinite(v) or v<0 for v in holdings.values()):
+    try:
+        amount=float(amount)
+        cash_amount=float(cash_amount)
+    except (ValueError,TypeError,OverflowError):
+        return {"error":"Los importes deben ser numéricos."}
+    if not math.isfinite(amount) or not math.isfinite(cash_amount) or cash_amount<0 or any(not math.isfinite(v) or v<0 for v in holdings.values()):
         return {"error":"Importes no finitos o posiciones inválidas; no es seguro simular."}
     if operation not in ("Comprar","Vender"):
         return {"error":"Operación no válida."}
@@ -361,11 +365,11 @@ def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker
         return {"error":"Origen de fondos inválido."}
     if operation=="Vender" and funding_mode not in ("CASH","Retiro externo"):
         return {"error":"Destino de fondos inválido."}
-    if total<=0:
+    if not math.isfinite(total) or total<=0:
         return {"error":"El patrimonio inicial debe ser positivo."}
     if amount<=0:
         return {"error":"El monto debe ser positivo."}
-    if ticker=="CASH":
+    if ticker not in holdings or ticker=="CASH":
         return {"error":"CASH es el origen o destino de los fondos; elegí otro activo para operar."}
     if operation=="Vender" and amount>current:
         return {"error":f"Venta de {fmt_usd(amount)} supera la posición disponible de {fmt_usd(current)}."}
@@ -401,8 +405,10 @@ def simulate_trade(ticker, operation, amount, funding_mode="CASH", source_ticker
         else:
             holdings["CASH"]=cash_before+amount
             new_total=total
-    if new_total<=0:
-        return {"error":"El patrimonio resultante no es válido."}
+    if not math.isfinite(new_total) or new_total<=0 or any(not math.isfinite(v) or v<0 for v in holdings.values()):
+        return {"error":"El patrimonio o las posiciones resultantes no son válidos."}
+    if abs(sum(holdings.values())-new_total)>0.01:
+        return {"error":"No concilian los fondos simulados."}
     top=lambda dic,den: sum(sorted((max(0,v) for v in dic.values()),reverse=True)[:5])/den
     cash_after=holdings.get("CASH",0.0)
     return {
