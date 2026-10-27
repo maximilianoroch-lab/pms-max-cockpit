@@ -13,7 +13,8 @@ def _date(value):
     numeric=pd.to_numeric(pd.Series([value]),errors="coerce").iloc[0]
     if pd.notna(numeric):
         return pd.to_datetime(numeric,unit="D",origin="1899-12-30",errors="coerce")
-    return pd.to_datetime(value,dayfirst=True,format="mixed",errors="coerce")
+    iso=pd.to_datetime(value,format="%Y-%m-%d",errors="coerce")
+    return iso if pd.notna(iso) else pd.to_datetime(value,dayfirst=True,format="mixed",errors="coerce")
 
 def provisional_monthly(operations, current_positions, observed=None):
     required_ops={"Ticker","Fecha","Evento","Flujo USD"}
