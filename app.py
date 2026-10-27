@@ -791,6 +791,12 @@ elif page=="Evolución":
             serial=pd.to_datetime(values,unit="D",origin="1899-12-30",errors="coerce")
             textual=pd.to_datetime(col.where(values.isna()),dayfirst=True,format="mixed",errors="coerce")
             return serial.fillna(textual)
+        from monthly_reconstruction import monthly_quantities
+        _monthly_positions,_monthly_exceptions=monthly_quantities(_audit_ops)
+        st.caption(f"Reconstrucción preliminar: {len(_monthly_positions)} registros de tenencias por mes y ticker. Sin precios históricos, no equivalen a patrimonio.")
+        if not _monthly_exceptions.empty:
+            with st.expander("Eventos que necesitan conciliación (opciones y amortizaciones)"):
+                st.dataframe(_monthly_exceptions,hide_index=True,width="stretch")
         _ops_dates=_parse_audit_date(_audit_ops["Fecha"])
         _price_dates=_parse_audit_date(_audit_prices["Fecha"])
         _ops_months=set(_ops_dates.dropna().dt.to_period("M").astype(str))
