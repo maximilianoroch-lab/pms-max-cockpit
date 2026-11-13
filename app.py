@@ -725,6 +725,8 @@ elif page=="Diversificación":
             st.caption("No hay ETFs directos para mostrar.")
 
 elif page=="Evolución":
+    from pms_movers import show_top10
+    show_top10(st, PORTFOLIO["sheet_id"], data.get("app_feed_v2", pd.DataFrame()).get("Ticker", pd.Series(dtype=str)).dropna().tolist(), key="bersoch")
     snaps=data.get("snapshot_series_v2",pd.DataFrame()).copy()
     if not snaps.empty and "Valor total USD_num" in snaps.columns:
         snaps["Fecha orden"]=pd.to_datetime(snaps["Fecha"],dayfirst=True,errors="coerce",format="mixed")
