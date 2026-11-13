@@ -1,0 +1,25 @@
+name: Validar rankings ARS
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pms_movers.py'
+      - 'tests/test_pms_movers.py'
+      - '.github/workflows/validate-movers.yml'
+      - 'app.py'
+  workflow_dispatch:
+jobs:
+  ranking:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Dependencias de prueba
+        run: python -m pip install --disable-pip-version-check pandas requests 'streamlit>=1.50'
+      - name: Validar sintaxis
+        run: python -m py_compile app.py pms_movers.py tests/test_pms_movers.py
+      - name: Pruebas con datos controlados (sin APIs pagas)
+        run: python -m unittest discover -s tests -p 'test_pms_movers.py' -v
