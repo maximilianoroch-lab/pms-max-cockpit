@@ -770,7 +770,21 @@ elif page=="Evolución":
         _difference=float(_end["Valor total USD_num"]-_first["Valor total USD_num"])
         st.metric("Cambio patrimonial entre extremos observados",fmt_usd(_difference))
         st.caption("Desde "+_first["Fecha orden"].strftime("%d/%m/%Y")+" hasta "+_end["Fecha orden"].strftime("%d/%m/%Y")+" · incluye aportes/retiros no identificados; no es rentabilidad.")
-    st.subheader("Evolución mensual por tipo de activo")
+    st.subheader("Evolución patrimonial · snapshots (USD)")
+    if len(hist) >= 2:
+        _snap_plot=px.line(hist,x="Fecha orden",y="Valor total USD_num",markers=True,
+                           labels={"Fecha orden":"Fecha","Valor total USD_num":"Patrimonio USD"})
+        _snap_plot.update_traces(line=dict(width=3),marker=dict(size=6))
+        _snap_plot.update_layout(height=360,margin=dict(l=12,r=18,t=10,b=25),
+                                 hovermode="x unified",showlegend=False,
+                                 paper_bgcolor="#000000",plot_bgcolor="#000000",
+                                 font=dict(color="#ededed"))
+        _snap_plot.update_yaxes(gridcolor="rgba(220,220,220,0.18)",tickprefix="US$ ")
+        st.plotly_chart(_snap_plot,width="stretch")
+        st.caption("Cierres patrimoniales observados. Incluye Cash, aportes y retiros; no equivale a rentabilidad.")
+    else:
+        st.info("Se requieren al menos dos snapshots para graficar el patrimonio.")
+    st.subheader("Evolución por los cinco tipos de activo · sin Cash")
     st.caption("USD en miles · histórico anterior a snapshots: reconstrucción estimada; desde snapshots: cierres observados. Variación patrimonial ≠ rentabilidad.")
     st.warning("Serie reconstruida **preliminar**: falta conciliar cierres anuales 2024–2025. Los importes históricos son aproximaciones y no deben utilizarse como patrimonio auditado ni rentabilidad.")
     TYPES=("Cripto","ETF","CEDEAR","Bonos","Acciones")
