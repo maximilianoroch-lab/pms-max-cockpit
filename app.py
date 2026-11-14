@@ -542,7 +542,8 @@ if page=="Resumen":
             fig=px.bar(chart,x="Peso",y="Grupo",orientation="h",text="Etiqueta",
                        category_orders={"Grupo":chart["Grupo"].tolist()},
                        labels={"Peso":"% del patrimonio","Grupo":""},
-                       color_discrete_sequence=["#598eb8"])
+                       color="Grupo",
+                       color_discrete_map={"Cripto":"#d71920","ETF":"#ffc000","Cedear":"#80c342","Soberanos":"#4472c4","Acción AR":"#8c8c8c"})
             style_bar(fig)
             fig.update_traces(textposition="outside",cliponaxis=False,width=0.42)
             fig.update_layout(height=260,margin=dict(l=10,r=40,t=10,b=10),showlegend=False,
@@ -817,7 +818,9 @@ elif page=="Evolución":
             _long["Tipo"]=_long["Tipo"].map(_labels)
             _long["Mes"]=pd.Categorical(_long["Mes"],categories=_type_monthly["Mes"].tolist(),ordered=True)
             _palette={_labels[k]:v for k,v in _colors.items()}
-            st.markdown("#### Curvas por tipo")
+            st.markdown("#### Curvas por tipo · escala 0–90 mil USD")
+            if _type_monthly[list(TYPES)].max().max()>90:
+                st.warning("Algún tipo supera US$ 90.000; se mantiene la escala solicitada, revisar el período.")
             if len(_type_monthly)>=2:
                 _lines=px.line(_long,x="Mes",y="Miles USD",color="Tipo",markers=True,
                     category_orders={"Tipo":[_labels[t] for t in TYPES]},
@@ -827,7 +830,7 @@ elif page=="Evolución":
                     hovermode="x unified",legend=dict(orientation="h",y=-0.23,x=0),
                     paper_bgcolor="#000000",plot_bgcolor="#000000",font=dict(color="#ededed"))
                 _lines.update_xaxes(type="category",showgrid=False)
-                _lines.update_yaxes(ticksuffix=" mil",gridcolor="rgba(220,220,220,0.18)")
+                _lines.update_yaxes(range=[0,90],dtick=15,ticksuffix=" mil",gridcolor="rgba(220,220,220,0.18)")
                 for _m in _type_monthly["Mes"].astype(str):
                     if _m.endswith("-12"):
                         _lines.add_vline(x=_m,line_dash="dot",line_color="#dddddd",line_width=1.5)
