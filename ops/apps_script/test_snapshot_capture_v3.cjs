@@ -81,8 +81,11 @@ function run(){
   assert.throws(()=>repeated.capture('11:00'),/Tickers duplicados/);
   assert.equal(repeated.getRows().length,0);
   const holiday=fixture({holiday:true});
-  assert.equal(holiday.capture('11:00').status,'SKIP_NON_TRADING_DAY');
-  assert.equal(holiday.getRows().length,0);
+  const bymaHoliday = holiday.capture('11:00');
+  assert.equal(bymaHoliday.status,'CAPTURED_UNVERIFIED');
+  assert.equal(bymaHoliday.bymaOpen,false);
+  assert.equal(holiday.getRows().length,2);
+  assert.ok(holiday.getRows().every(x=>x[4]==='OBSERVADO_BYMA_CERRADO_NO_CERTIFICADO'));
   const duplicate=fixture({duplicate:true});
   assert.equal(duplicate.capture('11:00').status,'ALREADY_CAPTURED');
   assert.equal(duplicate.getRows().length,2);
@@ -91,7 +94,7 @@ function run(){
   assert.equal(partial.getRows().length,1);
   assert.throws(()=>fixture().capture('12:00'),/Horario no permitido/);
   const weekend=fixture({at:'2026-11-15T14:02:00.000Z'});
-  assert.equal(weekend.capture('11:00').status,'SKIP_NON_TRADING_DAY');
+  assert.equal(weekend.capture('11:00').status,'SKIP_WEEKEND');
   assert.equal(weekend.getRows().length,0);
   for (const [slot,utcHour] of [['11:00','14'],['14:00','17'],['17:00','20']]) {
     const each=fixture({at:'2026-11-16T'+utcHour+':02:00.000Z'});
@@ -99,6 +102,6 @@ function run(){
     assert.equal(each.getRows().length,2);
   }
   assert.throws(()=>fixture().capture('17:00'),/fuera de franja/);
-  console.log('PASS: capture/replay, integrity, invalid quote, holiday, weekend, complete and partial existing IDs, invalid slot and all three slots');
+  console.log('PASS: capture/replay, integrity, invalid quote, BYMA holiday observation, weekend skip, complete and partial existing IDs, invalid slot and all three slots');
 }
 run();
