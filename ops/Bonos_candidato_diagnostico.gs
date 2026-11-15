@@ -6,8 +6,11 @@
  */
 const BONOS_PMS = ['AN29','AO28','AO29','GD35','GD38','GD41'];
 const MAX_ANTIGUEDAD_BONOS_DIAS = 4;
+// Explicit fail-closed gate. Do not enable by merely installing script or triggers.
+const BONOS_WRITE_ENABLED = false;
 
 function actualizarBonos() {
+  if (!BONOS_WRITE_ENABLED) throw new Error('Bonos automático BLOQUEADO: requiere autorización, unidad y segunda fuente verificadas');
   const sh = SpreadsheetApp.getActive().getSheetByName('bonos_auto_v2');
   if (!sh) throw new Error('Falta hoja bonos_auto_v2');
   const errores = [];
