@@ -2,8 +2,8 @@ name: Audit Bersoch daily snapshot freshness
 on:
   workflow_dispatch:
   schedule:
-    # Tuesday–Saturday 02:20 UTC = 23:20 Argentina time, previous Monday–Friday
-    - cron: '20 2 * * 2-6'
+    # Tuesday–Saturday 03:20 UTC = 00:20 Argentina time, checks previous market weekday
+    - cron: '20 3 * * 2-6'
   push:
     paths:
       - 'ops/pms_freshness_monitor.py'
