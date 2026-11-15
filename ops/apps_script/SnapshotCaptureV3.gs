@@ -25,6 +25,17 @@ function pmsV3_bymaOpen_(now, ss) {
   if (!dates.length) throw new Error('Calendario de feriados vacío: validar antes de habilitar capturas');
   return !dates.some(x => String(x).trim() === pmsV3_localDay_(now));
 }
+function pmsV3_sourceStamp_(raw) {
+  // Sheet recalculation time is not the market timestamp of a specific quote.
+  if (raw instanceof Date && !isNaN(raw.getTime())) {
+    return 'PLANILLA_NO_MERCADO:' + Utilities.formatDate(raw, PMS_V3.tz, 'yyyy-MM-dd HH:mm:ss');
+  }
+  if (typeof raw === 'number' && isFinite(raw)) {
+    return 'PLANILLA_SERIAL_NO_MERCADO:' + String(raw);
+  }
+  const text = String(raw == null ? '' : raw).trim();
+  return text ? 'SIN_CERTIFICAR:' + text : 'SIN_FECHA_FUENTE_VERIFICADA';
+}
 function pmsV3_capture_(slot) {
   if (!PMS_V3.expectedSlots.includes(slot)) throw new Error('Horario no permitido');
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -90,7 +101,7 @@ function pmsV3_capture_(slot) {
     const out = rows.map(r => [
       snapshotId,day,slot,collectedAt,marketStatus,
       String(r[0]),Number(r[2]),Number(r[6]),String(r[5]||''),
-      String(r[15]||''),String(r[8]||''),'Sin prueba de frescura por ticker'
+      String(r[15]||''),pmsV3_sourceStamp_(r[8]),'Sin prueba de frescura por ticker'
     ]);
     const first = Math.max(target.getLastRow()+1,2);
     target.getRange(first,1,out.length,12).setValues(out);
