@@ -17,9 +17,7 @@ function pmsV3_localDay_(d) {
 function pmsV3_localHour_(d) {
   return Utilities.formatDate(d, PMS_V3.tz, 'HH:mm:ss');
 }
-function pmsV3_isBusinessDay_(now, ss) {
-  const day = Number(Utilities.formatDate(now, PMS_V3.tz, 'u'));
-  if (day >= 6) return false;
+function pmsV3_bymaOpen_(now, ss) {
   const sh = ss.getSheetByName(PMS_V3.holidays);
   if (!sh) throw new Error('Falta calendario de feriados de mercado: instalación incompleta');
   const dates = sh.getLastRow() > 1
@@ -36,7 +34,11 @@ function pmsV3_capture_(slot) {
   if (!pmsV3_localHour_(now).startsWith(slot.slice(0,2) + ':')) {
     throw new Error('Captura fuera de franja ' + slot + ': ' + pmsV3_localHour_(now));
   }
-  if (!pmsV3_isBusinessDay_(now, ss)) return {status:'SKIP_NON_TRADING_DAY'};
+  const weekDay = Number(Utilities.formatDate(now, PMS_V3.tz, 'u'));
+  if (weekDay >= 6) return {status:'SKIP_WEEKEND'};
+  // BYMA closure does not imply all USD-listed or crypto assets are closed.
+  // Preserve a portfolio observation with an explicit provenance warning.
+  const bymaOpen = pmsV3_bymaOpen_(now, ss);
   const lock = LockService.getDocumentLock();
   if (!lock || !lock.tryLock(20000)) throw new Error('No se obtuvo bloqueo documental');
   try {
@@ -82,16 +84,18 @@ function pmsV3_capture_(slot) {
       }
     }
     // Preserve source & displayed value; do not infer an exchange close.
+    const marketStatus = bymaOpen ? 'OBSERVADO_NO_CERTIFICADO' :
+      'OBSERVADO_BYMA_CERRADO_NO_CERTIFICADO';
     const collectedAt = pmsV3_localHour_(now);
     const out = rows.map(r => [
-      snapshotId,day,slot,collectedAt,'OBSERVADO_NO_CERTIFICADO',
+      snapshotId,day,slot,collectedAt,marketStatus,
       String(r[0]),Number(r[2]),Number(r[6]),String(r[5]||''),
       String(r[15]||''),String(r[8]||''),'Sin prueba de frescura por ticker'
     ]);
     const first = Math.max(target.getLastRow()+1,2);
     target.getRange(first,1,out.length,12).setValues(out);
     SpreadsheetApp.flush();
-    return {status:'CAPTURED_UNVERIFIED',snapshotId,positions:rows.length,
+    return {status:'CAPTURED_UNVERIFIED',bymaOpen,snapshotId,positions:rows.length,
       totalUsd:rows.reduce((s,r)=>s+Number(r[6]),0)};
   } finally { lock.releaseLock(); }
 }
