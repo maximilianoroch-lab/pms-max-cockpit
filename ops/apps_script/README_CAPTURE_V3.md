@@ -35,3 +35,11 @@
 - Exactly one row per ticker in a successfully captured slot; totals reconcile.
 - Stale quotes remain clearly unverified and cannot pollute the certified history.
 - No changes to holdings, historical rows, live triggers, or the DEMO instance.
+
+## Compatibilidad de calendarios (15/11/2026)
+- El calendario `feriados_mercado_v3` representa **solo BYMA** y debe poblarse desde el calendario validado del PR #32 (fechas ISO `YYYY-MM-DD`, columna A).
+- Si BYMA está cerrado un día lunes–viernes, la fotografía patrimonial **sí se conserva** para no perder actividad de activos internacionales o cripto, con etiqueta `OBSERVADO_BYMA_CERRADO_NO_CERTIFICADO`.
+- En sábado y domingo no se programan estas tres observaciones (aunque cripto opere 24/7). Una futura captura cripto 24/7 sería un proceso distinto.
+- La fotografía completa nunca certifica cierre de ninguno de los mercados y no ingresa automáticamente en el histórico.
+- El horario de Apps Script debe estar configurado en America/Argentina/Buenos_Aires y la función rechaza disparadores fuera de su hora local.
+- Aunque PR #31 y PR #32 pasen pruebas separados, el calendario/hojas/disparadores deben revisarse juntos antes de instalar.
