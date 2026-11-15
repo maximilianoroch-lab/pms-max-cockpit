@@ -80,3 +80,9 @@ Se evaluará después de revisar el desarrollo benchmark aportado por el usuario
 - [x] **DEMO Mobile:** la evolución de tipos no traza cinco curvas artificialmente constantes y el historial muestra una sola observación cuando dos fechas guardan la misma valuación. Validación JS y prueba de navegador Playwright aprobadas luego de adaptar el test a la nueva semántica.
 - [ ] **Siguiente bloqueo de datos:** sin cotizaciones históricas de todo el universo ni fuente DEMO V5 verificable no puede certificarse cierre de 12 y 13/11, historia real LLY ni ranking de precios ARS DEMO. No imputar históricos ni confundir precios indicativos con cotizaciones observadas.
 - [ ] **Publicación:** verificar estado efectivo de Streamlit y Netlify por separado; GitHub CI aprobado no prueba despliegue publicado.
+
+### 14/11/2026 — Control automático de frescura de datos y producción
+- [x] Bersoch: agregado `ops/pms_freshness_monitor.py` (solo lectura) con 7 pruebas y ejecución programada desde GitHub Actions a las 00:20 ART de martes a sábado. Detecta ausencia de snapshots previos e integridad no apta; **no genera cierres ni modifica Sheets**. Los feriados bursátiles no están modelados y requieren revisión si se dispara una alerta.
+- [x] Primera corrida de auditoría: último snapshot **11/11/2026**, cierre esperado **13/11/2026**, **2 jornadas hábiles sin snapshot**. Control de integridad APTO. Es correcto que el workflow figure en rojo mientras persista esta diferencia.
+- [x] DEMO: se habilitó workflow de navegador de producción para inspeccionar ambos Streamlit, al modificar aplicación y con verificación programada 2 veces por semana; la ejecución puede quedar bloqueada por gateway o suspensión de Streamlit.
+- [ ] Aún falta conciliación histórica completa (Bersoch) y fuente de precios DEMO V5. El chequeo automático detecta faltantes; no puede fabricar cierres anteriores.
