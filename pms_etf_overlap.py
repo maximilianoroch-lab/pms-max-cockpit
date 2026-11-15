@@ -34,6 +34,11 @@ def approximate_etf_overlap(positions,top_holdings,max_names=10):
     dates=pd.to_datetime(holdings["Fecha"],errors="coerce",utc=True)
     if dates.isna().any() or (dates > pd.Timestamp.now(tz="UTC")).any():
         raise ValueError("Fecha ETF inválida o futura")
+    holdings["_asof_day"]=dates.dt.normalize()
+    # Never mix holdings snapshots with different effective dates for the same ETF.
+    # Two sources can only be compared after normalizing to the same known day.
+    if (holdings.groupby("ETF")["_asof_day"].nunique() > 1).any():
+        raise ValueError("Constituyentes ETF con fechas de composición incompatibles")
     if (holdings["Constituyente"].isin(["","NAN","NONE"])).any() or (holdings["ETF"].isin(["","NAN","NONE"])).any():
         raise ValueError("Ticker ETF o constituyente vacío")
     holdings=holdings.sort_values(["ETF","Peso ETF"],ascending=[True,False]).groupby("ETF",group_keys=False).head(max_names)
