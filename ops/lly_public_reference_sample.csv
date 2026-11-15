@@ -1,0 +1,4 @@
+date,ticker,price_ars,source,settlement,verification
+2026-11-11,LLY,42800,https://larueda.com.ar/datos/acciones/LLY/?denominacion=ARS&page=1,unverified,REFERENCE_ONLY
+2026-11-12,LLY,42820,https://larueda.com.ar/datos/acciones/LLY/?denominacion=ARS&page=1,unverified,REFERENCE_ONLY
+2026-11-13,LLY,43100,https://www.cohen.com.ar/Bursatil/Especie/LLY/MERVAL/24hs.,24hs,REFERENCE_ONLY
