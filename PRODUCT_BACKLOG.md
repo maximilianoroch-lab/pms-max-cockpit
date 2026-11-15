@@ -98,3 +98,10 @@ Se evaluará después de revisar el desarrollo benchmark aportado por el usuario
 - [x] El análisis técnico de **cinco años, EMA 21/50/200 y RSI 14** está implementado en ambos escritorios (vista Asesor IA). No presentarlo como una función enteramente pendiente; aún puede perfeccionarse su experiencia de uso.
 - [x] Ranking de cotizaciones Bersoch: corregido el parseo numérico por moneda para precios ARS con separador de miles; los valores USD de criptomonedas mantienen su interpretación decimal. Se agregaron pruebas de regresión. Esta corrección no afecta posiciones ni patrimonio.
 - [ ] Los históricos 12/13 de noviembre y la discrepancia LLY siguen sujetos a reconstrucción con datos externos fechados y conciliados. No rellenarlos con cotizaciones actuales.
+
+
+## Licencias de datos de ETF — BLOQUEO DE PUBLICACIÓN (15/11/2026)
+
+El repositorio es **público**. La documentación de BlackRock/iShares restringe el uso y redistribución de las descargas de holdings. El PR #43 fue reescrito para conservar solamente metadatos de fuente y fecha; su rama actual **no tiene `etf_top_holdings.csv`**. El motor de look-through continúa probado pero no debe usar composiciones de terceros en el dashboard hasta confirmar permisos adecuados o datos con licencia reutilizable.
+
+El catálogo `ops/etf_sources_registry.csv` contiene URL, emisor y fecha de siete ETF como referencias, no posiciones ni porcentajes. GLD es exposición a oro, no se debe modelar como cesta accionaria. La fecha de una fuente oficial tampoco equivale por sí sola a autorización para republicar.
