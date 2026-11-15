@@ -63,3 +63,13 @@ El proyecto **NO** se declara «terminado» porque los tests simulados estén ve
 - El PR #31 tiene una prueba específica de esa condición. **Antes de integrar**, volver a comprobar que su último commit y los controles generales siguen verdes.
 - **Precisión:** que todos los PR sean individualmente fusionables y hayan aprobado CI **no demuestra** que una rama con todos simultáneamente no tenga conflictos o fallos de contrato; sigue pendiente la prueba integrada de instalación.
 - Las dos versiones móviles y la DEMO escritorio también mostraron sus controles individuales en verde durante la verificación de este corte. Sigue faltando comprobar el SHA desplegado en Netlify/Streamlit.
+
+## Mejoras adicionales de navegación (15/11/2026)
+
+- **PMS Bersoch escritorio #40:** selector descriptivo de herramientas. Rama basada sobre la integración #39; después de aprobar, trasladar el cambio a la rama final, no hacer merge directo en main sin el paquete de los PR #31–#38.
+- **DEMO escritorio #30:** selector descriptivo sin tocar el ticker activo. Rama derivada de main, independiente de #29. No declarar integración completa de DEMO hasta probar #29 y #30 juntos.
+- **PMS Bersoch Mobile #6:** título «PMS Bersoch» y enlace seguro al escritorio con herramientas avanzadas. **Depende del #5** porque se creó sobre su rama; integrar primero #5 y después #6. Un enlace no equivale a implementación móvil nativa.
+- **DEMO Mobile:** conserva sus herramientas locales simplificadas y enlace al escritorio independiente. Aún falta certificar publicación y accesibilidad.
+- Ningún enlace transmite posiciones, custodios ni códigos de acceso por query string; probar en navegador real después del despliegue.
+
+La prueba individual y una rama técnicamente fusionable no garantizan que el commit aparezca en Streamlit/Netlify; el pipeline de deployment sigue pendiente.
