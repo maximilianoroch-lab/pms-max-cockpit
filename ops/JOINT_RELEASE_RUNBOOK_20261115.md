@@ -53,3 +53,13 @@
 ## Condición de salida
 
 El proyecto **NO** se declara «terminado» porque los tests simulados estén verdes. El estado correcto es «borradores técnicos preparados; pendientes de datos/acceso/instalación». El paquete de release estará listo para instalar solo cuando los bloqueos de código e integración estén resueltos; despliegue y certificación requieren validación posterior.
+
+
+## Revisión cruzada ejecutada posteriormente (15/11/2026)
+
+- GitHub confirmó como **exitosos** los controles individuales de los ocho borradores Bersoch escritorio #31–#38 (en la revisión previa al cambio de calendario).
+- También pasaron las pruebas individuales de DEMO escritorio #29 y los borradores móviles #5/#5.
+- Se identificó y corrigió en #31 una incompatibilidad con el calendario BYMA: anteriormente se descartaba la captura de toda la cartera en un feriado argentino; ahora se conserva la observación multibolsa con etiqueta `OBSERVADO_BYMA_CERRADO_NO_CERTIFICADO`, sin convertirla en cierre de BYMA.
+- El PR #31 tiene una prueba específica de esa condición. **Antes de integrar**, volver a comprobar que su último commit y los controles generales siguen verdes.
+- **Precisión:** que todos los PR sean individualmente fusionables y hayan aprobado CI **no demuestra** que una rama con todos simultáneamente no tenga conflictos o fallos de contrato; sigue pendiente la prueba integrada de instalación.
+- Las dos versiones móviles y la DEMO escritorio también mostraron sus controles individuales en verde durante la verificación de este corte. Sigue faltando comprobar el SHA desplegado en Netlify/Streamlit.
