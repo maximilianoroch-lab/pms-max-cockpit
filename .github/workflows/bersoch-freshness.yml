@@ -1,0 +1,23 @@
+name: Audit Bersoch daily snapshot freshness
+on:
+  workflow_dispatch:
+  schedule:
+    # Tuesday–Saturday 02:20 UTC = 23:20 Argentina time, previous Monday–Friday
+    - cron: '20 2 * * 2-6'
+  push:
+    paths:
+      - 'ops/pms_freshness_monitor.py'
+      - 'ops/test_pms_freshness_monitor.py'
+      - '.github/workflows/bersoch-freshness.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests for date rules and integrity
+        run: python -m unittest ops.test_pms_freshness_monitor -v
+      - name: Read current snapshot and integrity controls
+        run: python -m ops.pms_freshness_monitor
