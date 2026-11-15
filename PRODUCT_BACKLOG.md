@@ -86,3 +86,9 @@ Se evaluará después de revisar el desarrollo benchmark aportado por el usuario
 - [x] Primera corrida de auditoría: último snapshot **11/11/2026**, cierre esperado **13/11/2026**, **2 jornadas hábiles sin snapshot**. Control de integridad APTO. Es correcto que el workflow figure en rojo mientras persista esta diferencia.
 - [x] DEMO: se habilitó workflow de navegador de producción para inspeccionar ambos Streamlit, al modificar aplicación y con verificación programada 2 veces por semana; la ejecución puede quedar bloqueada por gateway o suspensión de Streamlit.
 - [ ] Aún falta conciliación histórica completa (Bersoch) y fuente de precios DEMO V5. El chequeo automático detecta faltantes; no puede fabricar cierres anteriores.
+
+### Validación adicional (noche del 14/11/2026)
+- [x] Bersoch escritorio: agregado aviso visible en **Resumen** cuando los snapshots están atrasados, tomando `snapshot_series_v2` en modo solo lectura; la nueva versión pasó las pruebas de calidad y rankings.
+- [x] DEMO escritorio: corregido el test de navegador de producción para usar los títulos reales de cada pantalla y emitir diagnóstico de encabezados, título y URL en vez de una espera opaca.
+- [ ] **Bloqueo de certificación pública Streamlit:** prueba real de navegador en GitHub Actions (run `43669235093`) obtuvo título HTML correcto de ambas apps, pero ningún encabezado visible (`headings=[]`) después de varios intentos. No se puede afirmar que las apps estén funcionando en producción. Es necesario investigar suspensión, arranque o conexión de sesión Streamlit; la evidencia no permite distinguir la causa sin acceder al control/diagnóstico de Streamlit Cloud.
+- [ ] Snapshots de Bersoch del 12–13/11 siguen faltando; el monitor GitHub detecta esta condición con precisión (2 jornadas hábiles) y marca error intencionalmente. No crear cierres con precios actuales.
