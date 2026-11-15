@@ -27,15 +27,40 @@ def parse_date(text):
     raise ValueError("Invalid snapshot date")
 
 
-def prior_business_date(today):
-    """Last weekday before the local audit day (holidays need separate validation)."""
+def prior_business_date(today, holidays=frozenset()):
+    """Last prior market session, excluding verified market holidays."""
     day = today - dt.timedelta(days=1)
-    while day.weekday() >= 5:
+    while day.weekday() >= 5 or day in holidays:
         day -= dt.timedelta(days=1)
     return day
 
 
-def assess_snapshots(rows, today):
+def load_market_holidays(path):
+    """Load explicitly maintained ISO market holidays; fail closed on malformed rows."""
+    if not path:
+        return frozenset()
+    with open(path, encoding="utf-8-sig") as stream:
+        rows = csv.DictReader(stream)
+        if not rows.fieldnames or "date" not in rows.fieldnames:
+            raise ValueError("Market holiday CSV must include a date column")
+        days = set()
+        for row in rows:
+            value = str(row.get("date") or "").strip()
+            if not value:
+                continue
+            try:
+                parsed = dt.date.fromisoformat(value)
+            except ValueError as exc:
+                raise ValueError("Invalid market holiday date: " + value) from exc
+            if parsed.isoformat() != value:
+                raise ValueError("Market holiday dates must use YYYY-MM-DD")
+            days.add(parsed)
+        if not days:
+            raise ValueError("Configured market holiday file contains no dates")
+    return frozenset(days)
+
+
+def assess_snapshots(rows, today, holidays=frozenset()):
     dates = []
     for row in rows:
         raw = row.get("Fecha", "")
@@ -44,12 +69,12 @@ def assess_snapshots(rows, today):
         except ValueError:
             continue
     if not dates:
-        return {"status": "MISSING", "latest": None, "expected": prior_business_date(today).isoformat(),
+        return {"status": "MISSING", "latest": None, "expected": prior_business_date(today, holidays).isoformat(),
                 "missing_weekdays": None}
     latest = max(dates)
-    expected = prior_business_date(today)
+    expected = prior_business_date(today, holidays)
     missing = sum(1 for offset in range(1, (today-latest).days)
-                  if (latest+dt.timedelta(days=offset)).weekday() < 5) if today > latest else 0
+                  if (latest+dt.timedelta(days=offset)).weekday() < 5 and (latest+dt.timedelta(days=offset)) not in holidays) if today > latest else 0
     return {"status": "LATE" if latest < expected else "OK", "latest": latest.isoformat(),
             "expected": expected.isoformat(), "missing_weekdays": missing}
 
@@ -83,10 +108,13 @@ def assess_integrity(rows):
 
 def main():
     today = dt.datetime.now(TZ).date()
+    calendar_path = os.environ.get("PMS_MARKET_HOLIDAYS_CSV", "").strip()
     output = {"audited_at_local": dt.datetime.now(TZ).isoformat(), "portfolio": "Bersoch",
-              "read_only": True, "market_holidays_not_modeled": True}
+              "read_only": True, "market_holidays_not_modeled": not bool(calendar_path)}
     try:
-        snapshot = assess_snapshots(read_sheet("snapshot_series_v2"), today)
+        holidays = load_market_holidays(calendar_path)
+        output["market_holiday_calendar"] = "verified_external_csv" if calendar_path else "none"
+        snapshot = assess_snapshots(read_sheet("snapshot_series_v2"), today, holidays)
         integrity = assess_integrity(read_sheet("control_integridad_v2"))
         output["snapshot"] = snapshot
         output["integrity_problems"] = integrity

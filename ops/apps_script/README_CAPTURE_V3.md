@@ -1,0 +1,37 @@
+# Capture V3 — implementation review, NOT INSTALLED
+
+## Verified defects in existing candidate (Base PMS Bersoch / APPS_SCRIPT_V2)
+- 11:00 and 14:00 update MEP/bonds but do not preserve separate valuation observations.
+- 17:00 writes legacy history, keyed only by date; a second run can overwrite the same day's instrument rows.
+- Control `APTO` tests missing valuations, not that every ticker price is fresh as of the intended slot.
+- Weekends are skipped, but market holidays are not modeled.
+- `APPS_SCRIPT_V2` says `PREPARADO / NO INSTALADO`. This is document status, NOT proof of current Apps Script trigger state.
+
+## Proposed safer workflow
+1. Owner verifies existing Apps Script project and triggers first; do not install duplicates.
+2. Create two new **separate** sheets:
+   - `observaciones_intradiarias_v3`: twelve plain-text/number columns with headers
+     `Snapshot ID,Fecha,Horario,Hora real,Estado,Ticker,Cantidad,Valor USD,Moneda,Fuente valor,Fecha actualización fuente,Observación`.
+   - `feriados_mercado_v3`: first column `Fecha (AAAA-MM-DD)`; load and verify exchange holiday schedule, include a known explicit row (or marker; empty is blocked).
+3. Review script with production user, confirm position count, price-source freshness, and time zone.
+4. Run read-only data validation and a safe staging test before enabling 11/14/17 triggers.
+5. Install at most one trigger per named handler; review execution logs and permissions.
+6. Capture each slot append-only with unique date+slot ID. Repeated invocations return ALREADY_CAPTURED.
+7. Label captures **OBSERVADO_NO_CERTIFICADO**, never promise observed close price without per-instrument timestamp and independent verification.
+8. Promotion into `historial_precios` / `snapshot_series_v2` requires a separate audited process; no automatic promotion in this candidate.
+9. Backfill November 12 and 13 only with verified historical holdings, prices, cash/FX and reconciliation. Never use Sunday's or Friday's latest price as a substitute.
+
+## Known constraints
+- The existing `posiciones_v2` does not provide a trustworthy market-close timestamp per security. A complete valuation can still be stale.
+- Apps Script triggers scheduled near the hour do not guarantee exact executions.
+- Argentine and relevant foreign market calendars may differ by security; this candidate uses an explicit controlled trading-day calendar and should not be deployed until agreed.
+- The `pmsV3_1700` observation is not a legally or analytically certified closing snapshot.
+- Until a persistent error-alert delivery channel is configured, failures will only be visible in script execution logs or existing freshness monitor.
+
+## Acceptance checks before approval
+- Re-run same slot: zero new rows.
+- Non-trading day: zero new rows.
+- Integrity not APTO or missing ticker value: zero new rows and visible error.
+- Exactly one row per ticker in a successfully captured slot; totals reconcile.
+- Stale quotes remain clearly unverified and cannot pollute the certified history.
+- No changes to holdings, historical rows, live triggers, or the DEMO instance.

@@ -1,0 +1,19 @@
+name: Broker transaction preflight tests (offline)
+on:
+  pull_request:
+    paths:
+      - 'ops/transaction_reconciliation_preflight.py'
+      - 'ops/test_transaction_reconciliation_preflight.py'
+      - '.github/workflows/test-transaction-reconciliation.yml'
+  workflow_dispatch:
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest ops.test_transaction_reconciliation_preflight -v

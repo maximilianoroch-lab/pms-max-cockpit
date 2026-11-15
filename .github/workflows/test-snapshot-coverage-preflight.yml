@@ -1,0 +1,22 @@
+name: Snapshot historical coverage preflight (offline)
+on:
+  pull_request:
+    paths:
+      - 'ops/snapshot_coverage_preflight.py'
+      - 'ops/test_snapshot_coverage_preflight.py'
+      - 'ops/snapshot_calendar_audit.py'
+      - 'ops/test_snapshot_calendar_audit.py'
+      - '.github/workflows/test-snapshot-coverage-preflight.yml'
+  workflow_dispatch:
+jobs:
+  coverage-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify preflight never mistakes missing coverage for certified valuation
+        run: python -m unittest ops.test_snapshot_coverage_preflight ops.test_snapshot_calendar_audit -v
