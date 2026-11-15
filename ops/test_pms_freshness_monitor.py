@@ -57,4 +57,18 @@ class FreshnessTests(unittest.TestCase):
             p.write_text("date,source\n2026-11-13,verified exchange notice\n", encoding="utf-8")
             self.assertIn(dt.date(2026,11,13),load_market_holidays(str(p)))
 
+    def test_official_byma_2026_calendar_treats_trading_without_settlement_as_open(self):
+        from pathlib import Path
+        holidays=load_market_holidays(str(Path(__file__).parent/"byma_no_trading_2026.csv"))
+        self.assertIn(dt.date(2026,11,9),holidays)
+        self.assertIn(dt.date(2026,11,10),holidays)
+        self.assertNotIn(dt.date(2026,11,6),holidays)
+        self.assertNotIn(dt.date(2026,12,24),holidays)
+        self.assertNotIn(dt.date(2026,11,12),holidays)
+        self.assertNotIn(dt.date(2026,11,13),holidays)
+        self.assertEqual(prior_business_date(dt.date(2026,11,11),holidays),
+                         dt.date(2026,11,6))
+        self.assertEqual(prior_business_date(dt.date(2026,11,14),holidays),
+                         dt.date(2026,11,13))
+
 if __name__=="__main__":unittest.main()
