@@ -22,3 +22,10 @@
 6. Solo después promover valores a `historial_precios` y recalcular el patrimonio histórico con reconciliación total.
 
 Se agregó `ops/lly_history_audit.py` para producir un reporte read-only de anomalías a partir de un export CSV; el programa no se conecta a Sheets ni escribe en Google Drive. `ops/lly_public_reference_sample.csv` son referencias puntuales, **no** un histórico completo ni un feed de producción.
+
+
+## Auditoría directa de Base PMS Bersoch (15/11/2026)
+
+La búsqueda en `historial_precios` encontró **19 registros LLY** (08/10–11/11/2026). En los 19 figura exactamente **ARS 23.100** como precio unitario, a pesar de que todos se rotulan `Cotización automática`. La columna `Precio USD` y el valor total USD cambian por tipo de cambio, pero **esto no valida el precio LLY de mercado**. La constancia del mismo precio unitario en todas las fechas es un indicador de referencia obsoleta/fallback, no prueba de fraude ni de un precio corregido para las 19 fechas.
+
+**Instrucción de auditoría:** revisar los 19 registros uno por uno contra cotizaciones fechadas de CEDEAR LLY, misma unidad, modalidad y plaza. La muestra externa documentada de 11–13/11 no se extrapola al mes anterior. Preservar los 19 originales y adjuntar evidencia antes de cualquier corrección. Nunca reetiquetar toda la serie como válida por haber hallado un precio para el 13/11.
