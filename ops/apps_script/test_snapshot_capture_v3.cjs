@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, 'SnapshotCaptureV3.gs'), 'utf8');
-function fixture({holiday=false, apto=true, duplicate=false, partial=false, missingValue=false, repeatedTicker=false, at='2026-11-16T14:02:00.000Z'} = {}) {
+function fixture({holiday=false, apto=true, duplicate=false, partial=false, missingValue=false, repeatedTicker=false,sourceSerial=false, at='2026-11-16T14:02:00.000Z'} = {}) {
   const records = duplicate || partial ? [
     ['OBS-20261116-1100','','','','','AAPL'],
     ...(partial ? [] : [['OBS-20261116-1100','','','','','GOOGL']])
@@ -21,7 +21,7 @@ function fixture({holiday=false, apto=true, duplicate=false, partial=false, miss
   const pos = {
     getLastRow: () => 3,
     getRange: () => ({getValues: () => [
-      ['AAPL','Apple',1,'','', 'ARS', missingValue?0:100, '', '', '', '', '', '', '', '', 'quote'],
+      ['AAPL','Apple',1,'','', 'ARS', missingValue?0:100, '', sourceSerial?46341.41616:'', '', '', '', '', '', '', 'quote'],
       [repeatedTicker?'AAPL':'GOOGL','Alphabet',2,'','', 'ARS', 200, '', '', '', '', '', '', '', '', 'quote']
     ]})
   };
@@ -77,12 +77,19 @@ function run(){
   const badQuote=fixture({missingValue:true});
   assert.throws(()=>badQuote.capture('11:00'),/sin valor válido/);
   assert.equal(badQuote.getRows().length,0);
+  const serial=fixture({sourceSerial:true});
+  assert.equal(serial.capture('11:00').status,'CAPTURED_UNVERIFIED');
+  assert.match(serial.getRows()[0][10],/^PLANILLA_SERIAL_NO_MERCADO:/);
+  assert.equal(serial.getRows()[0][11],'Sin prueba de frescura por ticker');
   const repeated=fixture({repeatedTicker:true});
   assert.throws(()=>repeated.capture('11:00'),/Tickers duplicados/);
   assert.equal(repeated.getRows().length,0);
   const holiday=fixture({holiday:true});
-  assert.equal(holiday.capture('11:00').status,'SKIP_NON_TRADING_DAY');
-  assert.equal(holiday.getRows().length,0);
+  const bymaHoliday = holiday.capture('11:00');
+  assert.equal(bymaHoliday.status,'CAPTURED_UNVERIFIED');
+  assert.equal(bymaHoliday.bymaOpen,false);
+  assert.equal(holiday.getRows().length,2);
+  assert.ok(holiday.getRows().every(x=>x[4]==='OBSERVADO_BYMA_CERRADO_NO_CERTIFICADO'));
   const duplicate=fixture({duplicate:true});
   assert.equal(duplicate.capture('11:00').status,'ALREADY_CAPTURED');
   assert.equal(duplicate.getRows().length,2);
@@ -91,7 +98,7 @@ function run(){
   assert.equal(partial.getRows().length,1);
   assert.throws(()=>fixture().capture('12:00'),/Horario no permitido/);
   const weekend=fixture({at:'2026-11-15T14:02:00.000Z'});
-  assert.equal(weekend.capture('11:00').status,'SKIP_NON_TRADING_DAY');
+  assert.equal(weekend.capture('11:00').status,'SKIP_WEEKEND');
   assert.equal(weekend.getRows().length,0);
   for (const [slot,utcHour] of [['11:00','14'],['14:00','17'],['17:00','20']]) {
     const each=fixture({at:'2026-11-16T'+utcHour+':02:00.000Z'});
@@ -99,6 +106,6 @@ function run(){
     assert.equal(each.getRows().length,2);
   }
   assert.throws(()=>fixture().capture('17:00'),/fuera de franja/);
-  console.log('PASS: capture/replay, integrity, invalid quote, holiday, weekend, complete and partial existing IDs, invalid slot and all three slots');
+  console.log('PASS: capture/replay, integrity, invalid quote, BYMA holiday observation, weekend skip, complete and partial existing IDs, invalid slot and all three slots');
 }
 run();
