@@ -47,14 +47,14 @@ class FreshnessTests(unittest.TestCase):
     def test_load_calendar_rejects_invalid_date(self):
         with tempfile.TemporaryDirectory() as directory:
             p=pathlib.Path(directory)/"holidays.csv"
-            p.write_text("date,source\\n2026-13-40,invalid\\n", encoding="utf-8")
+            p.write_text("date,source\n2026-13-40,invalid\n", encoding="utf-8")
             with self.assertRaises(ValueError):
                 load_market_holidays(str(p))
 
     def test_load_calendar_valid(self):
         with tempfile.TemporaryDirectory() as directory:
             p=pathlib.Path(directory)/"holidays.csv"
-            p.write_text("date,source\\n2026-11-13,verified exchange notice\\n", encoding="utf-8")
+            p.write_text("date,source\n2026-11-13,verified exchange notice\n", encoding="utf-8")
             self.assertIn(dt.date(2026,11,13),load_market_holidays(str(p)))
 
 if __name__=="__main__":unittest.main()
