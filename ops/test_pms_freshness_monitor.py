@@ -1,6 +1,8 @@
 import datetime as dt
 import unittest
-from ops.pms_freshness_monitor import assess_snapshots,assess_integrity,prior_business_date,parse_date
+import tempfile
+import pathlib
+from ops.pms_freshness_monitor import assess_snapshots,assess_integrity,prior_business_date,parse_date,load_market_holidays
 
 class FreshnessTests(unittest.TestCase):
     def test_prior_weekday_saturday(self):
@@ -25,5 +27,34 @@ class FreshnessTests(unittest.TestCase):
               {"Control":"Caja conciliación USD","Valor":"0"},
               {"Control":"Snapshot apto","Estado":"APTO"}]
         self.assertEqual(assess_integrity(rows),[])
+
+    def test_calendar_skips_friday_holiday(self):
+        holidays={dt.date(2026,11,13)}
+        self.assertEqual(prior_business_date(dt.date(2026,11,14), holidays),
+                         dt.date(2026,11,12))
+        result=assess_snapshots([{"Fecha":"12/11/2026"}],
+                                dt.date(2026,11,14), holidays)
+        self.assertEqual(result["status"],"OK")
+        self.assertEqual(result["missing_weekdays"],0)
+
+    def test_calendar_excludes_holiday_from_missing_count(self):
+        holidays={dt.date(2026,11,12)}
+        result=assess_snapshots([{"Fecha":"11/11/2026"}],
+                                dt.date(2026,11,14), holidays)
+        self.assertEqual(result["status"],"LATE")
+        self.assertEqual(result["missing_weekdays"],1)
+
+    def test_load_calendar_rejects_invalid_date(self):
+        with tempfile.TemporaryDirectory() as directory:
+            p=pathlib.Path(directory)/"holidays.csv"
+            p.write_text("date,source\\n2026-13-40,invalid\\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                load_market_holidays(str(p))
+
+    def test_load_calendar_valid(self):
+        with tempfile.TemporaryDirectory() as directory:
+            p=pathlib.Path(directory)/"holidays.csv"
+            p.write_text("date,source\\n2026-11-13,verified exchange notice\\n", encoding="utf-8")
+            self.assertIn(dt.date(2026,11,13),load_market_holidays(str(p)))
 
 if __name__=="__main__":unittest.main()
