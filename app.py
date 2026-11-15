@@ -728,6 +728,32 @@ elif page=="Diversificación":
 elif page=="Evolución":
     from pms_movers import show_top10
     show_top10(st, PORTFOLIO["sheet_id"], data.get("app_feed_v2", pd.DataFrame()).get("Ticker", pd.Series(dtype=str)).dropna().tolist(), key="bersoch")
+    from pms_data_quality import history_status,suspicious_constant_quote
+    _source_snapshots=data.get("snapshot_series_v2",pd.DataFrame())
+    _coverage_status=history_status(_source_snapshots["Fecha"] if "Fecha" in _source_snapshots else [])
+    if _coverage_status["latest"] is not None:
+        _date_label=_coverage_status["latest"].strftime("%d/%m/%Y")
+        if _coverage_status["business_days_missing"]:
+            st.warning(f"Histórico incompleto: último snapshot {_date_label}; "
+                       f"{_coverage_status['business_days_missing']} jornada(s) hábil(es) posterior(es) sin cierre en la serie. "
+                       "Los feriados no están descontados; verificar antes de afirmar que falta una rueda.")
+        else:
+            st.caption(f"Último snapshot registrado: {_date_label}. La vigencia de cada cotización se verifica por separado.")
+    with st.expander("Auditoría de precios históricos · observaciones por revisar",expanded=False):
+        try:
+            from pms_movers import _history as _read_prices
+            _legacy_quotes=_read_prices(PORTFOLIO["sheet_id"])
+            _lly_finding=suspicious_constant_quote(_legacy_quotes,"LLY",43100)
+            if _lly_finding:
+                st.warning(f"LLY: {_lly_finding['observations']} cierres históricos registran "
+                           f"ARS {_lly_finding['historic_price_ars']:,.0f} sin variación; "
+                           "una referencia externa fechada el 13/11/2026 informa ARS 43.100. "
+                           "La discrepancia requiere conciliación; NO se corrigieron los snapshots patrimoniales.")
+            else:
+                st.caption("Sin anomalía constante LLY detectable con el criterio actual. "
+                           "Esto no certifica integridad de todos los activos.")
+        except Exception:
+            st.caption("No fue posible verificar el historial de cotizaciones en este momento.")
     snaps=data.get("snapshot_series_v2",pd.DataFrame()).copy()
     if not snaps.empty and "Valor total USD_num" in snaps.columns:
         snaps["Fecha orden"]=pd.to_datetime(snaps["Fecha"],dayfirst=True,errors="coerce",format="mixed")
