@@ -66,6 +66,8 @@ def apply_analysis_context(df):
         return df[df[col].astype(str)==str(val)].copy()
     return df
 
+TOOLS_PLACEHOLDER = "Elegir herramienta"
+
 with st.sidebar:
     st.title(PORTFOLIO["display_name"])
     st.caption("Cockpit · análisis + asesor IA")
@@ -75,13 +77,13 @@ with st.sidebar:
         ["Resumen","Diversificación","Evolución","Riesgo","Custodia","Posiciones"],
         label_visibility="collapsed",
         key="dashboard_nav",
-        on_change=lambda: (st.session_state.pop("force_page",None),st.session_state.update(tools_nav="—"))
+        on_change=lambda: (st.session_state.pop("force_page",None),st.session_state.update(tools_nav=TOOLS_PLACEHOLDER))
     )
     st.markdown("### Herramientas")
     st.markdown("""<style>[data-testid="stSidebar"] [data-testid="stRadio"] label p {white-space:nowrap; font-size:0.91rem}</style>""",unsafe_allow_html=True)
     tool_page=st.radio(
         "Herramientas",
-        ["—","Comparar Activos","Simular Compra/Venta"],
+        [TOOLS_PLACEHOLDER,"Comparar Activos","Simular Compra/Venta"],
         label_visibility="collapsed",
         key="tools_nav",
         on_change=lambda: st.session_state.pop("force_page",None)
@@ -92,7 +94,7 @@ with st.sidebar:
         # Los widgets dashboard_nav/tools_nav ya están instanciados en este rerun.
         # No modificar sus keys directamente: StreamlitWidgetAlreadyInstantiatedError.
         st.session_state["force_page"]="Asesor IA"
-    if tool_page!="—":
+    if tool_page!=TOOLS_PLACEHOLDER:
         page={"Comparar Activos":"Comparar","Simular Compra/Venta":"Simulador"}.get(tool_page,tool_page)
     if st.session_state.get("force_page")=="Asesor IA":
         page="Asesor IA"
