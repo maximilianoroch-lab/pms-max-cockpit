@@ -1,0 +1,19 @@
+name: Bond candidate write gate (offline)
+on:
+  pull_request:
+    paths:
+      - 'ops/Bonos_candidato_diagnostico.gs'
+      - 'ops/test_bond_update_write_gate.cjs'
+      - '.github/workflows/test-bond-write-gate.yml'
+  workflow_dispatch:
+jobs:
+  block-unsafe-writes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node ops/test_bond_update_write_gate.cjs
