@@ -35,3 +35,17 @@
 - Exactly one row per ticker in a successfully captured slot; totals reconcile.
 - Stale quotes remain clearly unverified and cannot pollute the certified history.
 - No changes to holdings, historical rows, live triggers, or the DEMO instance.
+
+## Compatibilidad de calendarios (15/11/2026)
+- El calendario `feriados_mercado_v3` representa **solo BYMA** y debe poblarse desde el calendario validado del PR #32 (fechas ISO `YYYY-MM-DD`, columna A).
+- Si BYMA está cerrado un día lunes–viernes, la fotografía patrimonial **sí se conserva** para no perder actividad de activos internacionales o cripto, con etiqueta `OBSERVADO_BYMA_CERRADO_NO_CERTIFICADO`.
+- En sábado y domingo no se programan estas tres observaciones (aunque cripto opere 24/7). Una futura captura cripto 24/7 sería un proceso distinto.
+- La fotografía completa nunca certifica cierre de ninguno de los mercados y no ingresa automáticamente en el histórico.
+- El horario de Apps Script debe estar configurado en America/Argentina/Buenos_Aires y la función rechaza disparadores fuera de su hora local.
+- Aunque PR #31 y PR #32 pasen pruebas separados, el calendario/hojas/disparadores deben revisarse juntos antes de instalar.
+
+## BYMA horario de cierre revisado — 15/11/2026
+
+La comunicación oficial BYMA **19031** de 28/10/2026 modificó horarios desde el 02/11/2026 (https://www.byma.com.ar/comunicados/com19031-horarios). Para acciones y CEDEAR, el cierre de negociación informado es **18:00 ART**, de modo que `pmsV3_1700` es **observación intradiaria**, NO cierre EOD. Mantener 11:00 / 14:00 / 17:00 como se acordó, sin convertir automáticamente la última observación en cierre de mercado. Para un cierre posterior a las 18:00 hace falta diseñar un proceso separado con confirmación de fuente, rezagos, plaza y fecha de precio por ticker; un mero trigger a las 18:30 no certifica el cierre.
+
+Las restricciones de negociación/liquidación del 06/11 y 11/11 de 2026 no equivalen a fin de semana. Las observaciones de 09/11 y 10/11 se conservan para portfolio multibolsa, marcadas BYMA cerrado. Fuente: https://www.byma.com.ar/mercado/calendario-bursatil.
