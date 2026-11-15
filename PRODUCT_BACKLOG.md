@@ -73,3 +73,10 @@ Se evaluará después de revisar el desarrollo benchmark aportado por el usuario
 - [ ] No reconstruir snapshots 12 y 13/11 con valuaciones parciales; exige cotizaciones fechadas de todas las posiciones y conciliación completa.
 - [ ] Discrepancia histórica LLY: historial_precios registraba ARS 23.100 de forma constante hasta 11/11, mientras IOL informa un cierre 11/11 de ARS 42.800 y 13/11 de ARS 43.100. Investigar y conciliar historia íntegra antes de reescribir snapshots. Fuente: https://iol.invertironline.com/Titulo/DatosHistoricos?mercado=BCBA&simbolo=LLY .
 - [ ] Reconstruir historial de precios DEMO propio V5, con fuente y fechas. No confundir valorizaciones ficticias estables con cotizaciones unitarias de mercado.
+
+### Avance adicional — 14/11/2026 (23:28 ART)
+- [x] Navegación de Custodia a instrumentos: Bersoch incluye acceso al Asesor IA desde activo y cuenta filtrados; DEMO V5 añade filtrado por custodio/cuenta/ticker y acceso a Asesor IA, Comparar y Simulador. Ambas pruebas de calidad y aislamiento pasaron tras el cambio.
+- [x] **DEMO V5:** 18 fechas de snapshots con patrimonio idéntico US$ 1.264.792,16709. En escritorio, las visualizaciones ahora comprimen fechas sin cambio efectivo en patrimonio/cantidad de activos o vector completo de valuaciones por ticker. Los CSV originales quedan intactos para auditoría. Nuevo snapshot automático sólo se graba si el vector de activos cambia; cron solamente lunes a viernes.
+- [x] **DEMO Mobile:** la evolución de tipos no traza cinco curvas artificialmente constantes y el historial muestra una sola observación cuando dos fechas guardan la misma valuación. Validación JS y prueba de navegador Playwright aprobadas luego de adaptar el test a la nueva semántica.
+- [ ] **Siguiente bloqueo de datos:** sin cotizaciones históricas de todo el universo ni fuente DEMO V5 verificable no puede certificarse cierre de 12 y 13/11, historia real LLY ni ranking de precios ARS DEMO. No imputar históricos ni confundir precios indicativos con cotizaciones observadas.
+- [ ] **Publicación:** verificar estado efectivo de Streamlit y Netlify por separado; GitHub CI aprobado no prueba despliegue publicado.
