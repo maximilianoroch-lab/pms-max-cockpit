@@ -498,6 +498,18 @@ if page in ["Resumen","Diversificación","Evolución","Riesgo","Custodia","Posic
     st.caption("Dashboard analítico de PMS Bersoch · navegación, filtros, drill-down y contexto compartido")
 
 if page=="Resumen":
+    # Avisar sobre falta de cierres sin modificar patrimonio ni reutilizar
+    # las cotizaciones de hoy como si fueran observaciones históricas.
+    from pms_data_quality import history_status
+    _snapshot_feed=data.get("snapshot_series_v2",pd.DataFrame())
+    _freshness=history_status(_snapshot_feed["Fecha"] if "Fecha" in _snapshot_feed else [])
+    if _freshness["latest"] is None:
+        st.warning("No hay snapshots patrimoniales fechados para verificar Evolución.")
+    elif _freshness["business_days_missing"]:
+        st.warning("Histórico patrimonial atrasado: último cierre "+
+                   _freshness["latest"].strftime("%d/%m/%Y")+
+                   f" · {_freshness['business_days_missing']} jornada(s) hábil(es) posterior(es) sin snapshot. "
+                   "Feriados no descontados; no confundir valuación actual con cierre histórico.")
     render_global_context_banner()
     if not summary.get("reconciled",True):
         st.warning(
