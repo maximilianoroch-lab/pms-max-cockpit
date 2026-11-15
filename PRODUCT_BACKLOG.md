@@ -58,3 +58,8 @@ Se evaluará después de revisar el desarrollo benchmark aportado por el usuario
 - Conservar valores patrimoniales en USD, precios individuales ARS donde corresponda y Cash dentro del patrimonio total, pero excluido de curvas por tipo.
 - Conservar colores por tipo: Cripto rojo; ETF amarillo; CEDEAR verde; Bonos azul; Acciones gris.
 - No asumir que Netlify bloquea Streamlit; validar sus despliegues independientemente.
+
+### Hallazgos de auditoría de datos (lectura del 14/11/2026)
+- [ ] **Bloqueo de snapshot identificado:** `control_integridad_v2` señala una posición sin valor y estado `BLOQUEADO` en ambas bases. En `app_feed_v2`, ticker **LLY** tiene valor `-`, con indicación «Fetch fallo - usando ultimo valor de referencia». Verificar cotización válida y la ruta de fallback antes de intentar regenerar cierres.
+- [ ] **Bersoch:** último cierre visible en `snapshot_series_v2`: 11/11/2026; faltan cierres observados de 12 y 13/11. FUT actual en feed: US$ 4.600 al 13/11.
+- [ ] **DEMO:** `snapshot_series_v2` termina el 21/10/2026; sus cierres iniciales coinciden con Bersoch. Revisar procedencia y eliminar dependencia histórica de cartera real mediante reconstrucción documentada, no borrado indiscriminado. FUT DEMO figura US$ 6.850 al 15/10: no sustituir automáticamente por las valuaciones reales.
