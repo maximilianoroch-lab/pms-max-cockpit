@@ -49,3 +49,7 @@
 La comunicación oficial BYMA **19031** de 28/10/2026 modificó horarios desde el 02/11/2026 (https://www.byma.com.ar/comunicados/com19031-horarios). Para acciones y CEDEAR, el cierre de negociación informado es **18:00 ART**, de modo que `pmsV3_1700` es **observación intradiaria**, NO cierre EOD. Mantener 11:00 / 14:00 / 17:00 como se acordó, sin convertir automáticamente la última observación en cierre de mercado. Para un cierre posterior a las 18:00 hace falta diseñar un proceso separado con confirmación de fuente, rezagos, plaza y fecha de precio por ticker; un mero trigger a las 18:30 no certifica el cierre.
 
 Las restricciones de negociación/liquidación del 06/11 y 11/11 de 2026 no equivalen a fin de semana. Las observaciones de 09/11 y 10/11 se conservan para portfolio multibolsa, marcadas BYMA cerrado. Fuente: https://www.byma.com.ar/mercado/calendario-bursatil.
+
+## Marcas de actualización de planilla vs cotización
+
+La columna `Fecha actualización` de `posiciones_v2` puede contener números seriales de Google Sheets (ej. `46341,41616`) o un objeto Date. **No son una prueba de fecha de operación en mercado** y nunca se deben rotular como cotización actualizada. El capturador conserva el valor con prefijo `PLANILLA_SERIAL_NO_MERCADO:` o `PLANILLA_NO_MERCADO:`; si no hay fecha guarda `SIN_FECHA_FUENTE_VERIFICADA`. La última columna de observación sigue indicando que falta una prueba de frescura por ticker. Un cierre verificado requiere fuente con hora y plaza por instrumento, además de la integridad de cantidades.
