@@ -39,3 +39,22 @@ Las cotizaciones DEMO son indicativas. Los históricos observados no se conviert
 
 ## Automatización de fuentes
 Se evaluará después de revisar el desarrollo benchmark aportado por el usuario. No integrar cotizaciones o movimientos de otra cartera.
+
+## Auditoría de pendientes — 14/11/2026
+
+### Estado comprobado en repositorios
+- [x] Las dos instancias de escritorio apuntan a identificadores de Google Sheets distintos (según `portfolio_config.py`). Esto verifica separación de configuración; no sustituye una auditoría de contenidos ni de credenciales del despliegue.
+- [x] Pull requests Top 10 ARS fusionados: Bersoch escritorio #30, DEMO escritorio #28 y DEMO Mobile #4.
+- [ ] Confirmar que la versión pública de cada escritorio coincide con el último commit y que los gráficos se renderizan correctamente. Las pruebas automatizadas no sustituyen esta inspección.
+- [ ] Verificar completitud de cotizaciones y snapshots de Bersoch para 12 y 13/11/2026, incluyendo origen de datos, corte horario y conciliación del patrimonio total. No reconstruir cierres con FUT solamente.
+- [ ] Determinar vigencia de los datos históricos DEMO y asegurar que los rankings mensuales muestren referencia válida o ausencia de datos, nunca variaciones inventadas.
+- [ ] Auditar reconciliación entre feeds, inventarios, series históricas y totales por cuenta, en cada instancia por separado.
+- [ ] Comprobar publicación de ambas versiones Mobile una vez restablecidos los créditos de Netlify; no confundir merge con deploy.
+- [ ] Revisar alcance efectivo del Asesor IA técnico ya integrado (PR #28 Bersoch, #26 DEMO) antes de programar trabajo adicional de EMA/RSI y ventanas de cinco años.
+- [ ] Revisar automatización de cargas, fallas y alertas por cierres faltantes, preservando la separación entre fuentes Bersoch y DEMO.
+
+### Restricciones de trabajo
+- No cargar cotizaciones ni snapshots supuestos; registrar fecha y fuente verificable.
+- Conservar valores patrimoniales en USD, precios individuales ARS donde corresponda y Cash dentro del patrimonio total, pero excluido de curvas por tipo.
+- Conservar colores por tipo: Cripto rojo; ETF amarillo; CEDEAR verde; Bonos azul; Acciones gris.
+- No asumir que Netlify bloquea Streamlit; validar sus despliegues independientemente.
