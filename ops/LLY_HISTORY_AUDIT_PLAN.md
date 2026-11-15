@@ -29,3 +29,15 @@ Se agregó `ops/lly_history_audit.py` para producir un reporte read-only de anom
 La búsqueda en `historial_precios` encontró **19 registros LLY** (08/10–11/11/2026). En los 19 figura exactamente **ARS 23.100** como precio unitario, a pesar de que todos se rotulan `Cotización automática`. La columna `Precio USD` y el valor total USD cambian por tipo de cambio, pero **esto no valida el precio LLY de mercado**. La constancia del mismo precio unitario en todas las fechas es un indicador de referencia obsoleta/fallback, no prueba de fraude ni de un precio corregido para las 19 fechas.
 
 **Instrucción de auditoría:** revisar los 19 registros uno por uno contra cotizaciones fechadas de CEDEAR LLY, misma unidad, modalidad y plaza. La muestra externa documentada de 11–13/11 no se extrapola al mes anterior. Preservar los 19 originales y adjuntar evidencia antes de cualquier corrección. Nunca reetiquetar toda la serie como válida por haber hallado un precio para el 13/11.
+
+## Contraste ampliado de historia — 15/11/2026
+
+Fuente histórica consultable: https://www.larueda.com.ar/datos/acciones/LLY/?denominacion=ARS . LaRueda muestra cotizaciones diarias en ARS desde 08/10/2026 a 13/11/2026, con un historial de precio y volumen. **No** exhibe transacciones 09/11 ni 10/11, coherente con el calendario BYMA de días sin negociación. En la base real existen **19 filas LLY** (08/10 a 11/11), de las cuales **17 tienen fecha negociada** y las otras dos corresponden a 09/11 y 10/11; no son dos cotizaciones faltantes recuperables en BYMA.
+
+Ejemplos de diferencias **por proveedor y sin homologar modalidad**:
+- LaRueda: LLY cierre 08/10/2026 ARS 33.680; 19/10 ARS 36.040; 30/10 ARS 41.940; 06/11 ARS 40.760; **11/11 ARS 42.748,70**, **12/11 ARS 42.768,68**, **13/11 ARS 43.100**.
+- El dato IOL aproximado citado antes fue ARS 42.800 para 11/11 y ARS 42.820 para 12/11. Una fuente pública alternativa (TwelveData BCBA) expone cierres redondeados y puede usar otra sesión/plazo de liquidación: https://twelvedata.com/markets/875636/stock/bcba/lly/historical-data . **No sustituir valores de una fuente por otra dentro de una misma serie sin validar mercado y liquidación.**
+
+La serie de 19 precios constantes ARS 23.100 que consta en `historial_precios` es fuertemente sospechosa de stale/fallback: no debe interpretarse como fluctuación LLY real. Pero la validez de una corrección diaria todavía requiere confirmar unidad, plazo de liquidación, exactitud del proveedor, fecha de rueda, cantidad efectiva de 200 CEDEAR y tipo de cambio por corte antes de recalcular patrimonio.
+
+**Decisión de auditoría:** conservar los registros 09–10/11 como observaciones patrimoniales multibolsa, etiquetar explícitamente `BYMA SIN NEGOCIACIÓN`, y no inventar precio LLY del día. Para los otros 17 registros, preparar comparaciones por fecha desde una única fuente homogénea antes de autorizar cualquier escritura. No distribuir CSVs masivos de cotizaciones bursátiles de terceros sin revisar términos de uso.
