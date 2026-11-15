@@ -1,0 +1,19 @@
+name: ETF source licensing preflight
+on:
+  pull_request:
+    paths:
+      - 'ops/etf_sources_registry.csv'
+      - 'ops/test_etf_source_registry.py'
+      - '.github/workflows/test-etf-source-registry.yml'
+  workflow_dispatch:
+jobs:
+  avoid-unlicensed-redistribution:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest ops.test_etf_source_registry -v
