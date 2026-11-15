@@ -1,0 +1,20 @@
+name: Test snapshot capture V3 (offline)
+on:
+  pull_request:
+    paths:
+      - 'ops/apps_script/SnapshotCaptureV3.gs'
+      - 'ops/apps_script/test_snapshot_capture_v3.cjs'
+      - '.github/workflows/test-snapshot-capture-v3.yml'
+  workflow_dispatch:
+jobs:
+  snapshot-v3:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run mocked Apps Script snapshot tests (no production data)
+        run: node ops/apps_script/test_snapshot_capture_v3.cjs
