@@ -63,3 +63,10 @@ El proyecto **NO** se declara «terminado» porque los tests simulados estén ve
 - El PR #31 tiene una prueba específica de esa condición. **Antes de integrar**, volver a comprobar que su último commit y los controles generales siguen verdes.
 - **Precisión:** que todos los PR sean individualmente fusionables y hayan aprobado CI **no demuestra** que una rama con todos simultáneamente no tenga conflictos o fallos de contrato; sigue pendiente la prueba integrada de instalación.
 - Las dos versiones móviles y la DEMO escritorio también mostraron sus controles individuales en verde durante la verificación de este corte. Sigue faltando comprobar el SHA desplegado en Netlify/Streamlit.
+
+
+## Licencias de datos de ETF — BLOQUEO DE PUBLICACIÓN (15/11/2026)
+
+El repositorio es **público**. La documentación de BlackRock/iShares restringe el uso y redistribución de las descargas de holdings. El PR #43 fue reescrito para conservar solamente metadatos de fuente y fecha; su rama actual **no tiene `etf_top_holdings.csv`**. El motor de look-through continúa probado pero no debe usar composiciones de terceros en el dashboard hasta confirmar permisos adecuados o datos con licencia reutilizable.
+
+El catálogo `ops/etf_sources_registry.csv` contiene URL, emisor y fecha de siete ETF como referencias, no posiciones ni porcentajes. GLD es exposición a oro, no se debe modelar como cesta accionaria. La fecha de una fuente oficial tampoco equivale por sí sola a autorización para republicar.
