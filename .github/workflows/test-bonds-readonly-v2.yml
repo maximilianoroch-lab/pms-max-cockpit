@@ -1,0 +1,19 @@
+name: Bond Apps Script diagnostic V2 (offline)
+on:
+  pull_request:
+    paths:
+      - 'ops/Bonos_Diagnostico_SoloLectura_V2.gs'
+      - 'ops/test_bonds_readonly_v2.cjs'
+      - '.github/workflows/test-bonds-readonly-v2.yml'
+  workflow_dispatch:
+jobs:
+  protect-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node ops/test_bonds_readonly_v2.cjs
