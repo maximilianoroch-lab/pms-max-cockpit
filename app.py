@@ -1129,6 +1129,14 @@ elif page=="Custodia":
             style_bar(fig)
             finish_executive_bar(fig,stacked=True)
             st.plotly_chart(fig,width='stretch')
+    if not rows.empty:
+        _custody_target=st.selectbox("Analizar activo de la custodia seleccionada",
+                                     sorted(rows["Ticker"].dropna().astype(str).unique().tolist()),
+                                     key="bersoch_custody_target")
+        if st.button("Abrir en Asesor IA",key="bersoch_custody_to_ai",use_container_width=False):
+            st.session_state["active_ticker"]=_custody_target
+            st.session_state["force_page"]="Asesor IA"
+            st.rerun()
     rows_show=rows[["Cuenta","Ticker","Nombre","Tipo","Cantidad_num","Valor USD_num","Peso custodio_num"]].copy()
     rows_show["Cantidad_num"]=rows_show["Cantidad_num"].map(lambda x:fmt_num(x,0) if float(x).is_integer() else fmt_num(x,4))
     rows_show["Peso custodio_num"]=pct_points(rows_show["Peso custodio_num"])
