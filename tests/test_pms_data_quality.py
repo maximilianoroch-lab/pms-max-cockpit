@@ -1,8 +1,19 @@
 import unittest
 import pandas as pd
-from pms_data_quality import history_status,suspicious_constant_quote
+from pms_data_quality import history_status,suspicious_constant_quote,parse_ars_price
 
 class DataQualityTests(unittest.TestCase):
+    def test_ars_quote_number_formats(self):
+        formats={"23100":23100,"23.100":23100,"23.100,50":23100.5,
+                 "23,100.50":23100.5,"23100.50":23100.5,"0":None,"":None,
+                 "nan":None,"$ 43.100,00":43100}
+        for value,expected in formats.items():
+            with self.subTest(raw=value):
+                self.assertEqual(parse_ars_price(value),expected)
+    def test_constant_lly_with_grouping(self):
+        data=pd.DataFrame([{"Ticker":"LLY","Fecha":f"{day}/11/2026","Precio":"23.100","Moneda":"ARS"} for day in [9,10,11]])
+        finding=suspicious_constant_quote(data,"LLY",43100)
+        self.assertEqual(finding["historic_price_ars"],23100)
     def test_missing_business_day_after_wednesday(self):
         status=history_status(["11/11/2026"],today="2026-11-14")
         self.assertEqual(status["business_days_missing"],2)
