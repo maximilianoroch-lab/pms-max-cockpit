@@ -1,0 +1,20 @@
+name: Freshness calendar regression tests
+on:
+  pull_request:
+    paths:
+      - 'ops/pms_freshness_monitor.py'
+      - 'ops/test_pms_freshness_monitor.py'
+      - '.github/workflows/test-freshness-market-calendar.yml'
+  workflow_dispatch:
+jobs:
+  test-calendar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test read-only freshness monitor and holidays
+        run: python -m unittest ops.test_pms_freshness_monitor -v
