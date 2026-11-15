@@ -12,6 +12,21 @@ class RankingPesosTests(unittest.TestCase):
         with patch("pms_movers._history",return_value=pd.DataFrame(rows)):
             return rank_movers("ficticio",tickers)
 
+    def test_locale_thousands_separator_does_not_corrupt_ars_price(self):
+        got,_=self.check([row("10/11/2026","LLY","23.100"),
+                          row("11/11/2026","LLY","23.331")],["LLY"])
+        self.assertAlmostEqual(got.iloc[0]["Cotización ARS"],23331)
+        self.assertAlmostEqual(got.iloc[0]["Diaria %"],1)
+    def test_usd_decimal_is_not_thousands_separator(self):
+        rows=[]
+        for day,fx,coin in [("10/11/2026",1500,"1.234"),
+                            ("11/11/2026",1600,"1.300")]:
+            for ticker in ["A","B","C"]:
+                rows.append(row(day,ticker,fx,"ARS","1"))
+            rows.append(row(day,"ADA",coin,"USD",coin))
+        got,_=self.check(rows,["A","B","C","ADA"])
+        ada=got.set_index("Activo").loc["ADA"]
+        self.assertAlmostEqual(ada["Cotización ARS"],1.3*1600)
     def test_viernes_a_martes_con_feriado(self):
         rows=[row("06/11/2026","AAA",100),row("10/11/2026","AAA",110),
               row("06/11/2026","BBB",200),row("10/11/2026","BBB",190)]
