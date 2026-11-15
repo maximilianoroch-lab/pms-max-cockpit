@@ -41,6 +41,11 @@ def rank_movers(sheet_id, active_tickers):
     frame["Fecha"] = frame["Fecha"].dt.normalize()
     frame["Moneda"] = frame["Moneda"].astype(str).str.upper().str.strip()
     frame["raw_price"] = frame["Precio"].map(_number)
+    # ARS prices from Sheets can use dot as a thousands separator (23.100).
+    # Do not apply that interpretation to USD crypto prices where 1.234 is decimal.
+    from pms_data_quality import parse_ars_price
+    _ars_rows=frame["Moneda"].eq("ARS")
+    frame.loc[_ars_rows,"raw_price"]=frame.loc[_ars_rows,"Precio"].map(parse_ars_price)
     frame["usd_price"] = frame["Precio USD"].map(_number)
     frame = frame.loc[frame["raw_price"].gt(0)].copy()
     # The contemporaneous conversion ratio is inferred from the feed (ARS / USD).
