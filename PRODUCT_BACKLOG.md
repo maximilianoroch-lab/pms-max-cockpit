@@ -63,3 +63,13 @@ Se evaluará después de revisar el desarrollo benchmark aportado por el usuario
 - [ ] **Bloqueo de snapshot identificado:** `control_integridad_v2` señala una posición sin valor y estado `BLOQUEADO` en ambas bases. En `app_feed_v2`, ticker **LLY** tiene valor `-`, con indicación «Fetch fallo - usando ultimo valor de referencia». Verificar cotización válida y la ruta de fallback antes de intentar regenerar cierres.
 - [ ] **Bersoch:** último cierre visible en `snapshot_series_v2`: 11/11/2026; faltan cierres observados de 12 y 13/11. FUT actual en feed: US$ 4.600 al 13/11.
 - [ ] **DEMO:** `snapshot_series_v2` termina el 21/10/2026; sus cierres iniciales coinciden con Bersoch. Revisar procedencia y eliminar dependencia histórica de cartera real mediante reconstrucción documentada, no borrado indiscriminado. FUT DEMO figura US$ 6.850 al 15/10: no sustituir automáticamente por las valuaciones reales.
+
+### Reparaciones verificadas y pendientes históricos — 14/11/2026
+- [x] **LLY desbloqueado con cierre respaldado:** CEDEAR ARS 43.100 al 13/11/2026, plazo 24hs, fuente BYMA vía Cohen: https://www.cohen.com.ar/Bursatil/Especie/LLY/MERVAL/24hs. GoogleFinance sigue siendo primario; si falla se utiliza respaldo fechado de cotizaciones_manuales_v2.
+- [x] Ambas bases muestran 0 posiciones sin valor y control_integridad_v2 = APTO. Esto NO certifica la vigencia de todos los demás precios.
+- [x] Alerta de snapshot actualizada: avisa al pasar una rueda hábil sin cierre, ya no tolera 10 días bajo la etiqueta «al día».
+- [x] Código candidato Apps Script reforzado con control previo obligatorio y prohibición de snapshot automático en fin de semana. Continúa PREPARADO/NO INSTALADO.
+- [x] DEMO escritorio y DEMO Mobile no calculan Top 10 ARS con el historial_precios heredado de Bersoch: avisarán cuando falte serie independiente DEMO V5. Tests de aislamiento agregados.
+- [ ] No reconstruir snapshots 12 y 13/11 con valuaciones parciales; exige cotizaciones fechadas de todas las posiciones y conciliación completa.
+- [ ] Discrepancia histórica LLY: historial_precios registraba ARS 23.100 de forma constante hasta 11/11, mientras IOL informa un cierre 11/11 de ARS 42.800 y 13/11 de ARS 43.100. Investigar y conciliar historia íntegra antes de reescribir snapshots. Fuente: https://iol.invertironline.com/Titulo/DatosHistoricos?mercado=BCBA&simbolo=LLY .
+- [ ] Reconstruir historial de precios DEMO propio V5, con fuente y fechas. No confundir valorizaciones ficticias estables con cotizaciones unitarias de mercado.
