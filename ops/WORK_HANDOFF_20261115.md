@@ -6,7 +6,7 @@
 
 **Objetivo:** PMS Bersoch personal (escritorio/móvil) y DEMO PMS Max (escritorio/móvil), completamente aislados. El usuario prefiere automatizar la interacción con interfaces en Work; evitar pedirle tareas mecánicas de mouse. Reservar sus acciones para permisos, confirmación de fechas de operaciones y aprobaciones que modifiquen producción.
 
-## Cuatro únicos PR abiertos y SHAs candidatos
+## Cuatro únicos PR abiertos y SHAs de código verificado (antes del commit documental de traspaso)
 
 | Producto | Repositorio | PR | SHA candidato | CI verificado en Chat | Base |
 |---|---|---:|---|---|---|
@@ -17,7 +17,7 @@
 
 **17 PR anteriores fueron cerrados como superados, NO fusionados**: Bersoch escritorio #31–#44, DEMO escritorio #29–#30 y Bersoch Mobile #5. El PR antiguo de bonos #3 también fue cerrado antes, reemplazado por el módulo de solo lectura incluido en #45. Sus ramas y discusiones permanecen para auditoría. Solo los 4 PR de la tabla son candidatos actuales. No volver a fusionar candidatos anteriores en secuencia.
 
-Verificar nuevamente SHAs, cambios respecto de main, CI y estado de PR al iniciar Work. Una aprobación de GitHub no garantiza permiso administrativo ni que la app publicada corresponda a ese SHA.
+El PR Bersoch escritorio tiene commits adicionales de documentación de traspaso posteriores al SHA técnico de esta tabla; el HEAD final debe consultarse en GitHub. Comprobar CI del HEAD antes de fusionar. Verificar nuevamente SHAs, cambios respecto de main, CI y estado de PR al iniciar Work. Una aprobación de GitHub no garantiza permiso administrativo ni que la app publicada corresponda a ese SHA.
 
 ## Netlify: limitación presupuestaria obligatoria
 
