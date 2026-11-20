@@ -4,7 +4,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from data import load_all_data, portfolio_summary, enrich_positions, quote_text
+from data import load_all_data, portfolio_summary, enrich_positions, quote_text, read_sheet_csv, FEEDS
+from private_sheet_reader import configured_reader, PrivateSheetError
+from personal_user_access import require_personal_user
 from advisor import ask_advisor, build_action_prompt, compare_companies_structured
 from portfolio_config import PORTFOLIO
 
@@ -43,10 +45,20 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 SHEET_ID=PORTFOLIO["sheet_id"]
+try:
+    _sheet_settings=dict(st.secrets)
+except FileNotFoundError:
+    _sheet_settings={}
+require_personal_user(st, _sheet_settings)
+try:
+    SHEET_READER=configured_reader(_sheet_settings, set(FEEDS) | {"operaciones_normalizadas", "evolucion_tipo_mensual_estimado"})
+except PrivateSheetError:
+    st.error("No se pudo configurar el acceso privado a la base.")
+    st.stop()
 
 @st.cache_data(ttl=180, show_spinner=False)
 def get_data():
-    return load_all_data(SHEET_ID)
+    return load_all_data(SHEET_ID, csv_reader=SHEET_READER)
 
 data=get_data()
 summary=portfolio_summary(data)
@@ -833,10 +845,7 @@ elif page=="Evolución":
     def _load_monthly_type_values(sid):
         import requests
         from io import StringIO
-        url=f"https://docs.google.com/spreadsheets/d/{sid}/gviz/tq"
-        response=requests.get(url,params={"tqx":"out:csv","sheet":"evolucion_tipo_mensual_estimado"},timeout=18)
-        response.raise_for_status()
-        return pd.read_csv(StringIO(response.text))
+        return pd.read_csv(StringIO(read_sheet_csv(sid,"evolucion_tipo_mensual_estimado",csv_reader=SHEET_READER)))
     try:
         _type_monthly=_load_monthly_type_values(PORTFOLIO["sheet_id"])
         _type_monthly=_type_monthly.loc[_type_monthly["Mes"].astype(str).str.match(r"^20[0-9]{2}-[0-9]{2}$")].copy()
@@ -902,12 +911,9 @@ elif page=="Evolución":
             from special_manual_history import provisional_monthly
             @st.cache_data(ttl=3600,show_spinner=False)
             def _manual_history_sources(sheet_id):
-                base=f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq"
                 tables=[]
                 for name in ("operaciones_normalizadas","app_feed_v2"):
-                    response=_requests.get(base,params={"tqx":"out:csv","sheet":name},timeout=18)
-                    response.raise_for_status()
-                    tables.append(pd.read_csv(_StringIO(response.text)))
+                    tables.append(pd.read_csv(_StringIO(read_sheet_csv(sheet_id,name,csv_reader=SHEET_READER))))
                 return tables
             _operations_history,_manual_positions=_manual_history_sources(PORTFOLIO["sheet_id"])
             _manual_history=provisional_monthly(_operations_history,_manual_positions)

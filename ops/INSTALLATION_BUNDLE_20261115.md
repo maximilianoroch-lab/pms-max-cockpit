@@ -1,5 +1,11 @@
 # Instalación conjunta — PMS Bersoch y DEMO PMS Max
 
+> **SUPERADO COMO INSTRUCCIÓN DE INSTALACIÓN (19/11/2026).**
+> Este documento es antecedente histórico. No fusionar sus PR individuales.
+> La secuencia vigente y los cuatro candidatos consolidados están en
+> [CONTROLLED_INSTALLATION_20261119.md](CONTROLLED_INSTALLATION_20261119.md).
+> Ninguna aprobación histórica de CI autoriza publicar, gastar créditos o instalar activadores.
+
 **Estado: PREPARADO PARA REVISIÓN, NO INSTALADO.** Control de cambios del 15/11/2026. La aprobación de CI solo prueba código simulado; no acredita datos bursátiles, Apps Script, sincronización de Google Sheets, ni publicación de las cuatro aplicaciones.
 
 ## Borradores vigentes

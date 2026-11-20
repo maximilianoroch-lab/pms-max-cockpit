@@ -1,5 +1,10 @@
 # Instalación conjunta PMS Bersoch + DEMO PMS Max — plan de liberación
 
+> **SUPERADO COMO INSTRUCCIÓN DE INSTALACIÓN (19/11/2026).**
+> Conservar como antecedente; no ejecutar su secuencia de PR individuales.
+> Usar [CONTROLLED_INSTALLATION_20261119.md](CONTROLLED_INSTALLATION_20261119.md)
+> con los cuatro candidatos consolidados. Publicación, gasto y activadores siguen sin autorizar.
+
 **Estado:** borrador de integración, NO instalado. Fecha de corte: 15/11/2026. Este plan abarca los cuatro productos: Bersoch escritorio y Mobile, DEMO escritorio y Mobile.
 
 ## Inventario de candidatos
