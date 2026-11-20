@@ -52,12 +52,22 @@ def normalize(name,df):
         if "Peso cartera_num" not in df:add_num(df,"Peso cartera","Peso cartera_num",True)
     return df
 
-def load_all_data(sid):
+def read_sheet_csv(sid, sheet, rg=None, csv_reader=None):
+    if csv_reader is not None:
+        return csv_reader(sid, sheet, rg)
+    params={"tqx":"out:csv", "sheet":sheet}
+    if rg:
+        params["range"]=rg
+    r=requests.get(f"https://docs.google.com/spreadsheets/d/{sid}/gviz/tq",params=params,timeout=18)
+    r.raise_for_status()
+    return r.text
+
+def load_all_data(sid, csv_reader=None):
     out={}
     for name,rg in FEEDS.items():
         sheet="app_feed_v2" if name in ("app_home","app_banner") else name
-        r=requests.get(_url(sid,sheet,rg),timeout=15);r.raise_for_status()
-        out[name]=normalize(name,pd.read_csv(StringIO(r.text)))
+        text=read_sheet_csv(sid,sheet,rg,csv_reader)
+        out[name]=normalize(name,pd.read_csv(StringIO(text)))
     return out
 
 def _firstcol_map(df):

@@ -1,0 +1,20 @@
+name: ETF overlap date consistency
+on:
+  pull_request:
+    paths:
+      - 'pms_etf_overlap.py'
+      - 'tests/test_pms_etf_overlap.py'
+      - '.github/workflows/test-etf-overlap-dates.yml'
+  workflow_dispatch:
+jobs:
+  etf-coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas
+      - run: python -m unittest tests.test_pms_etf_overlap -v

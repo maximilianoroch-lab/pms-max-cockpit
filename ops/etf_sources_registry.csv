@@ -1,0 +1,8 @@
+ETF,Emisor,Fecha_fuente,Referencia,Estado
+SPY,State Street,2026-10-28,https://www.ssga.com/us/en/intermediary/etfs/state-street-spdr-sp-500-etf-trust-spy,PENDIENTE_LICENCIA
+QQQ,Invesco,2026-11-05,https://www.invesco.com/us/en/financial-products/etfs/invesco-qqq-trust-series-1.html,PENDIENTE_LICENCIA
+XLV,State Street,2026-10-29,https://www.ssga.com/us/en/intermediary/etfs/state-street-health-care-select-sector-spdr-etf-xlv,PENDIENTE_LICENCIA
+ACWI,iShares,2026-11-12,https://www.ishares.com/us/products/239600/ishares-msci-acwi-etf/latest-holdings.csv,PENDIENTE_LICENCIA
+FXI,iShares,2026-11-12,https://www.ishares.com/us/products/239536/ishares-china-large-cap-etf/latest-holdings.csv,PENDIENTE_LICENCIA
+EEM,iShares,2026-11-12,https://www.ishares.com/us/products/239637/ishares-msci-emerging-markets-etf/latest-holdings.csv,PENDIENTE_LICENCIA
+EWZ,iShares,2026-11-12,https://www.ishares.com/us/products/239612/ishares-msci-brazil-etf/latest-holdings.csv,PENDIENTE_LICENCIA

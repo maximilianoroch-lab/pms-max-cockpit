@@ -35,4 +35,18 @@ class PartialLookthrough(unittest.TestCase):
   p=pd.DataFrame({"Ticker":["SPY"],"Valor USD_num":[100]})
   c=pd.DataFrame({"ETF":["SPY"],"Constituyente":[""],"Peso ETF":[.1],"Fuente":["issuer"],"Fecha":["2026-10-01"]})
   with self.assertRaises(ValueError):approximate_etf_overlap(p,c)
+ def test_mismatched_etf_holding_dates_rejected(self):
+  p=pd.DataFrame({"Ticker":["SPY"],"Valor USD_num":[1000]})
+  c=pd.DataFrame({"ETF":["SPY","SPY"],"Constituyente":["AAPL","MSFT"],
+                  "Peso ETF":[.06,.05],"Fuente":["issuer","issuer"],
+                  "Fecha":["2026-11-05","2026-11-06"]})
+  with self.assertRaisesRegex(ValueError,"fechas de composición incompatibles"):
+   approximate_etf_overlap(p,c)
+ def test_different_etfs_may_have_different_source_dates(self):
+  p=pd.DataFrame({"Ticker":["SPY","QQQ"],"Valor USD_num":[1000,500]})
+  c=pd.DataFrame({"ETF":["SPY","QQQ"],"Constituyente":["AAPL","MSFT"],
+                  "Peso ETF":[.06,.08],"Fuente":["issuer","issuer"],
+                  "Fecha":["2026-11-05","2026-11-06"]})
+  result,coverage=approximate_etf_overlap(p,c)
+  self.assertEqual(len(coverage),2)
 if __name__=="__main__":unittest.main()

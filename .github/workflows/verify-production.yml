@@ -1,29 +1,30 @@
-name: Verify production PMS Bersoch
+name: Verify production PMS Bersoch (HTTP only)
 on:
-  push:
+  pull_request:
     paths:
-      - .github/workflows/verify-production.yml
+      - 'ops/production_reachability.py'
+      - 'ops/test_production_reachability.py'
+      - '.github/workflows/verify-production.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/production_reachability.py'
+      - 'ops/test_production_reachability.py'
+      - '.github/workflows/verify-production.yml'
   workflow_dispatch:
 jobs:
-  check:
+  probe-and-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
-      - name: Check deployed sites
-        run: |
-          python3 - <<'PY'
-          import urllib.request
-          endpoints={
-           'STREAMLIT':'https://pms-max.streamlit.app/',
-           'MOBILE':'https://pms-bersoch-mobile.netlify.app/'
-          }
-          for label,url in endpoints.items():
-           try:
-            req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
-            with urllib.request.urlopen(req,timeout=20) as r:
-             data=r.read(1200000).decode('utf-8','replace')
-             print(label,'HTTP',r.status,'URL',r.geturl(),'BYTES',len(data),
-                   'HISTORICAL_SHEET',('evolucion_tipo_mensual_estimado' in data),
-                   'YEAR_MARKERS',('stroke-dasharray' in data),
-                   'MOBILE_34_MONTHS',('monthlySeries(rows)' in data))
-           except Exception as e:print(label,'ERROR',type(e).__name__,str(e)[:240])
-          PY
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Unit test HTTP reachability classifications (offline)
+        run: python -m unittest ops.test_production_reachability -v
+      - name: Probe published HTML endpoints; never certify functional deployment
+        if: github.event_name == 'workflow_dispatch'
+        run: python ops/production_reachability.py

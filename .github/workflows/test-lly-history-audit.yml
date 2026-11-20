@@ -1,0 +1,20 @@
+name: LLY historical read-only audit tests
+on:
+  pull_request:
+    paths:
+      - 'ops/lly_history_audit.py'
+      - 'ops/test_lly_history_audit.py'
+      - '.github/workflows/test-lly-history-audit.yml'
+  workflow_dispatch:
+jobs:
+  lly-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Audit LLY price comparisons without writing Sheets
+        run: python -m unittest ops.test_lly_history_audit -v
